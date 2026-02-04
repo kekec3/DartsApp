@@ -27,7 +27,7 @@ class MainActivity : ComponentActivity() {
                         modifier = Modifier.fillMaxSize()
                     ) {
                         Text(
-                            text = "Pozdrav!!",
+                            text = "Pozdrav za Praiza!!",
                             fontSize = 64.sp,
                             textAlign = TextAlign.Center
                         )
