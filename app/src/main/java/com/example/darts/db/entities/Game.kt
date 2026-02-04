@@ -1,0 +1,15 @@
+package com.example.darts.db.entities
+
+import androidx.room.ColumnInfo
+import androidx.room.Entity
+import androidx.room.PrimaryKey
+import java.util.Date
+
+@Entity(tableName = "games")
+data class Game (
+    @PrimaryKey(autoGenerate = true) val idGame: Int = 0,
+    @ColumnInfo(name = "date") val date: String,
+    @ColumnInfo(name = "location") val location: String,
+    @ColumnInfo(name =  "duration") val duration: Long,
+    @ColumnInfo(name = "type") val type: String
+)
