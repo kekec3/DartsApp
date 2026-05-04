@@ -6,6 +6,8 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.sqlite.SQLiteConnection
 import com.example.darts.db.daos.GameDAO
+import com.example.darts.db.daos.MomentDAO
+import com.example.darts.db.daos.ParticipateDAO
 import com.example.darts.db.daos.PlayerDAO
 import com.example.darts.db.entities.Game
 import com.example.darts.db.entities.Moment
@@ -17,6 +19,8 @@ abstract class DartsDatabase: RoomDatabase() {
 
     abstract fun playerDao() : PlayerDAO
     abstract fun gameDao() : GameDAO
+    abstract fun participateDao() : ParticipateDAO
+    abstract fun momentDao() : MomentDAO
 
     companion object {
 
@@ -37,8 +41,8 @@ abstract class DartsDatabase: RoomDatabase() {
 
     private class DartsDatabaseCallback() : RoomDatabase.Callback() {
 
-        override fun onOpen(connection: SQLiteConnection) {
-            super.onOpen(connection)
+        override fun onCreate(connection: SQLiteConnection) {
+            super.onCreate(connection)
         }
     }
 }

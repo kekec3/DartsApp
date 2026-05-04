@@ -2,10 +2,18 @@ package com.example.darts.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-val Purple80 = Color(0xFFD0BCFF)
-val PurpleGrey80 = Color(0xFFCCC2DC)
-val Pink80 = Color(0xFFEFB8C8)
+// --- Core blacks (layered UI) ---
+val BlackPrimary = Color(0xFF0B0F0C)
+val BlackSecondary = Color(0xFF121712)
+val BlackSurface = Color(0xFF1A201B)
 
-val Purple40 = Color(0xFF6650a4)
-val PurpleGrey40 = Color(0xFF625b71)
-val Pink40 = Color(0xFF7D5260)
+// --- Lime accent ---
+val LimePrimary = Color(0xFF7CFF3A)
+val LimeSecondary = Color(0xFF5EDC1F)
+
+// --- Text ---
+val TextPrimary = Color(0xFFFFFFFF)
+val TextSecondary = Color(0xFFA5B0A5)
+
+// --- Utility ---
+val Divider = Color(0xFF2A2F2A)

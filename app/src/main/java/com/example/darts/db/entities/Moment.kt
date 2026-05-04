@@ -20,25 +20,5 @@ import androidx.room.PrimaryKey
 data class Moment (
     @PrimaryKey(autoGenerate = true) val idMoment: Int = 0,
     @ColumnInfo(name = "idGame") val idGame: Int,
-    @ColumnInfo(name = "image") val image: ByteArray
-) {
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (javaClass != other?.javaClass) return false
-
-        other as Moment
-
-        if (idMoment != other.idMoment) return false
-        if (idGame != other.idGame) return false
-        if (!image.contentEquals(other.image)) return false
-
-        return true
-    }
-
-    override fun hashCode(): Int {
-        var result = idMoment
-        result = 31 * result + idGame
-        result = 31 * result + image.contentHashCode()
-        return result
-    }
-}
+    @ColumnInfo(name = "image") val image: String
+)
