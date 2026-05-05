@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.sp
+import com.example.darts.ui.screens.HomeScreen
 import com.example.darts.ui.theme.DartsTheme
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -29,11 +30,7 @@ class MainActivity : ComponentActivity() {
                     Column(
                         modifier = Modifier.fillMaxSize()
                     ) {
-                        Text(
-                            text = "Pozdrav za Praiza!!",
-                            style = MaterialTheme.typography.headlineLarge,
-                            color = MaterialTheme.colorScheme.primary
-                        )
+                        GreetingPreview()
                     }
                 }
             }
@@ -46,5 +43,5 @@ class MainActivity : ComponentActivity() {
 @Preview(showBackground = true)
 @Composable
 fun GreetingPreview() {
-
+    HomeScreen()
 }
