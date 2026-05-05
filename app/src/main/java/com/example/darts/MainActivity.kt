@@ -16,13 +16,18 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.sp
 import com.example.darts.ui.screens.BattlesScreen
+import com.example.darts.ui.screens.GameImportScreen
 import com.example.darts.ui.screens.GameScreen
+import com.example.darts.ui.screens.GameSettingsScreen
+import com.example.darts.ui.screens.GameSharingScreen
 import com.example.darts.ui.screens.HomeScreen
 import com.example.darts.ui.screens.LegSummaryScreen
 import com.example.darts.ui.screens.MapScreen
 import com.example.darts.ui.screens.MatchSummaryScreen
 import com.example.darts.ui.screens.MomentsGalleryScreen
 import com.example.darts.ui.screens.PlayerStatsScreen
+import com.example.darts.ui.screens.PlayersScreen
+import com.example.darts.ui.screens.SettingsScreen
 import com.example.darts.ui.screens.StatisticsOverviewScreen
 import com.example.darts.ui.screens.TurnHistoryScreen
 import com.example.darts.ui.screens.score_entry.BoardButtonsScreen
@@ -56,5 +61,5 @@ class MainActivity : ComponentActivity() {
 @Preview(showBackground = true)
 @Composable
 fun GreetingPreview() {
-    MapScreen()
+    SettingsScreen()
 }
