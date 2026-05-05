@@ -2,6 +2,11 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!-- 1. Add Permissions here (Required for maps to work) -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+
     <application
         android:name=".DartsApplication"
         android:allowBackup="true"
@@ -12,6 +17,13 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.Darts">
+
+        <!-- 2. ADD THIS TAG HERE -->
+        <!-- Replace 'YOUR_ACTUAL_API_KEY_STRING' with the key from Google Cloud Console -->
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="AIzaSyDC5LOcfKGUBY8QE2yKnzQy5mo-7UYWJK4" />
+
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -19,7 +31,6 @@
             android:theme="@style/Theme.Darts">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
