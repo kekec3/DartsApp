@@ -15,9 +15,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.sp
-import com.example.darts.ui.screens.BattlesScreen
+import com.example.darts.ui.GameScreen
 import com.example.darts.ui.screens.GameImportScreen
-import com.example.darts.ui.screens.GameScreen
 import com.example.darts.ui.screens.GameSettingsScreen
 import com.example.darts.ui.screens.GameSharingScreen
 import com.example.darts.ui.screens.HomeScreen
@@ -35,6 +34,7 @@ import com.example.darts.ui.screens.score_entry.CameraScanScreen
 import com.example.darts.ui.screens.score_entry.TypeAndEnterScreen
 import com.example.darts.ui.screens.score_entry.VoiceRecognitionScreen
 import com.example.darts.ui.theme.DartsTheme
+import com.example.darts.viewModel.GameViewModelX01
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -48,7 +48,7 @@ class MainActivity : ComponentActivity() {
                     Column(
                         modifier = Modifier.fillMaxSize()
                     ) {
-                        GreetingPreview()
+                        GameScreen(GameViewModelX01())
                     }
                 }
             }
@@ -61,5 +61,4 @@ class MainActivity : ComponentActivity() {
 @Preview(showBackground = true)
 @Composable
 fun GreetingPreview() {
-    SettingsScreen()
 }
