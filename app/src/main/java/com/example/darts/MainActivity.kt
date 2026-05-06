@@ -1,5 +1,6 @@
 package com.example.darts
 
+import android.annotation.SuppressLint
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -29,7 +30,6 @@ import com.example.darts.ui.screens.PlayersScreen
 import com.example.darts.ui.screens.SettingsScreen
 import com.example.darts.ui.screens.StatisticsOverviewScreen
 import com.example.darts.ui.screens.TurnHistoryScreen
-import com.example.darts.ui.screens.score_entry.BoardButtonsScreen
 import com.example.darts.ui.screens.score_entry.CameraScanScreen
 import com.example.darts.ui.screens.score_entry.TypeAndEnterScreen
 import com.example.darts.ui.screens.score_entry.VoiceRecognitionScreen
@@ -39,6 +39,7 @@ import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+    @SuppressLint("ViewModelConstructorInComposable")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
