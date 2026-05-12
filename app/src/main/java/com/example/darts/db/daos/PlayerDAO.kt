@@ -14,5 +14,5 @@ interface PlayerDAO {
     fun getAllPlayers() : Flow<List<Player>>
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
-    suspend fun addPlayer(player: Player)
+    suspend fun addPlayer(player: Player) : Long
 }

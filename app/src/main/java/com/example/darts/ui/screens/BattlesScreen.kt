@@ -1,5 +1,7 @@
 package com.example.darts.ui.screens
 
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -9,18 +11,30 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.darts.db.entities.Battle
+import com.example.darts.ui.viewModels.BattleViewModel
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
+@RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BattlesScreen(
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    battleViewModel: BattleViewModel = hiltViewModel()
 ) {
+    val battles by battleViewModel.allBattles.collectAsState()
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -58,12 +72,6 @@ fun BattlesScreen(
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp) // More breathing room
         ) {
-            val battles = listOf(
-                BattleSummary("John vs Mike", "Last game: May 20, 2024", "3 - 1"),
-                BattleSummary("John vs Alex", "Last game: May 18, 2024", "2 - 1"),
-                BattleSummary("Team Night", "Last game: May 15, 2024", "3 - 2"),
-                BattleSummary("Weekend Darts", "Last game: May 10, 2024", "1 - 3")
-            )
 
             items(battles) { battle ->
                 BattleItem(battle)
@@ -72,8 +80,9 @@ fun BattlesScreen(
     }
 }
 
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun BattleItem(battle: BattleSummary) {
+fun BattleItem(battle: Battle) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp), // More rounded corners
@@ -90,24 +99,18 @@ fun BattleItem(battle: BattleSummary) {
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = battle.names,
+                    text = battle.name,
                     fontSize = 22.sp, // Bigger name text
                     fontWeight = FontWeight.SemiBold,
                     color = Color.White
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = battle.date,
+                    text = formatBattleDate(battle.dateCreated),
                     fontSize = 14.sp, // Slightly bigger date
                     color = Color.Gray
                 )
             }
-            Text(
-                text = battle.score,
-                fontSize = 28.sp, // Much bigger score
-                fontWeight = FontWeight.Black,
-                color = Color.White
-            )
         }
     }
 }
@@ -142,8 +145,15 @@ fun DartsBottomBar() {
     }
 }
 
-data class BattleSummary(
-    val names: String,
-    val date: String,
-    val score: String
-)
+@RequiresApi(Build.VERSION_CODES.O)
+fun formatBattleDate(timestamp: String): String {
+    return try {
+        val millis = timestamp.toLong()
+        val instant = Instant.ofEpochMilli(millis)
+        val formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm")
+            .withZone(ZoneId.systemDefault())
+        formatter.format(instant)
+    } catch (e: Exception) {
+        "N/A"
+    }
+}

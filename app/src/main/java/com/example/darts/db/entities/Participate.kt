@@ -7,12 +7,12 @@ import androidx.room.Index
 import androidx.room.PrimaryKey
 
 @Entity(tableName = "participate",
-    primaryKeys = ["idPlayer", "idGame"],
+    primaryKeys = ["idPlayer", "idBattle"],
     foreignKeys = [
         ForeignKey(
-            entity = Game::class,
-            parentColumns = ["idGame"],
-            childColumns = ["idGame"],
+            entity = Battle::class,
+            parentColumns = ["idBattle"],
+            childColumns = ["idBattle"],
             onDelete = ForeignKey.CASCADE,
             onUpdate = ForeignKey.CASCADE
         ),
@@ -26,10 +26,10 @@ import androidx.room.PrimaryKey
     ],
     indices = [
         Index("idPlayer"),
-        Index("idGame")
+        Index("idBattle")
     ])
 data class Participate (
     val idPlayer: Int,
-    val idGame: Int,
-    @ColumnInfo(name = "outcome") val outcome: Boolean
+    val idBattle: Int,
+    @ColumnInfo(name = "outcome") val outcome: Boolean = false
 )
