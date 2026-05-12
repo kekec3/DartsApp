@@ -1,5 +1,6 @@
 package com.example.darts.ui.viewModels
 
+import androidx.compose.runtime.collectAsState
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.darts.db.entities.Battle
@@ -17,6 +18,8 @@ class BattleViewModel @Inject constructor(
 
     private val _battleName = MutableStateFlow("")
     val battleName = _battleName.asStateFlow()
+    private val _existingBattle = MutableStateFlow<Battle?>(null)
+    val existingBattle = _existingBattle.asStateFlow()
 
     val allBattles: StateFlow<List<Battle>> = repository.getAllBattles().stateIn(
         scope = viewModelScope,
@@ -60,7 +63,43 @@ class BattleViewModel @Inject constructor(
         }
     }
 
-    fun saveBattle(onSuccess: () -> Unit) {
+    // Inside BattleViewModel.kt
+
+    fun saveBattle(
+        onSuccess: (Int) -> Unit,
+        onDuplicateFound: (Battle) -> Unit
+    ) {
+        viewModelScope.launch {
+            val currentSelection = _selectedPlayerIds.value.sorted()
+            var existingBattle: Battle? = null
+
+            val allBattlesList = repository.getAllBattles().first()
+
+            // Loop through battles to find a match
+            for (b in allBattlesList) {
+                // Use .first() to get the list out of the Flow immediately
+                val players = repository.getPlayersOfBattle(b.idBattle)
+                    .first()
+                    .map { it.idPlayer }
+                    .sorted()
+
+                if (players == currentSelection) {
+                    existingBattle = b
+                    break
+                }
+            }
+
+            if (existingBattle != null) {
+                onDuplicateFound(existingBattle)
+            } else {
+                repository.createBattleWithPlayers(
+                    _battleName.value,
+                    _selectedPlayerIds.value.toList()
+                )
+            }
+        }
+    }
+    fun createNewBattle(onSuccess: () -> Unit) {
         viewModelScope.launch {
             repository.createBattleWithPlayers(
                 _battleName.value,

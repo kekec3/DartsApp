@@ -22,6 +22,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.darts.db.entities.Battle
 import com.example.darts.db.entities.Player
 import com.example.darts.ui.viewModels.BattleViewModel
 
@@ -35,6 +36,8 @@ fun PlayersScreen(
     var searchQuery by remember { mutableStateOf("") }
     var showAddPlayerDialog by remember { mutableStateOf(false) }
     var showBattleNameDialog by remember { mutableStateOf(false) }
+    var showDuplicateBattleDialog by remember { mutableStateOf(false) }
+    var duplicateBattle by remember { mutableStateOf<Battle?>(null) }
 
     // Use 'by' to automatically unwrap the state
     val players by battleViewModel.availablePlayers.collectAsState()
@@ -69,19 +72,51 @@ fun PlayersScreen(
             confirmButton = {
                 Button(
                     onClick = {
-                        battleViewModel.saveBattle {
-                            showBattleNameDialog = false
-                            onBattleCreated()
-                        }
+                        battleViewModel.saveBattle(
+                            onSuccess = { newId ->
+                                showBattleNameDialog = false
+                                onBattleCreated() // Or pass newId if your navigation needs it
+                            },
+                            onDuplicateFound = { existing ->
+                                showBattleNameDialog = false
+                                duplicateBattle = existing // Trigger the "Duplicate" dialog
+                            }
+                        )
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.Green),
                     enabled = battleName.isNotBlank()
                 ) {
-                    Text("Ready", color = Color.Black)
+                    Text("Ready")
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showBattleNameDialog = false }) { Text("Cancel") }
+            }
+        )
+    }
+    if (duplicateBattle != null) {
+        AlertDialog(
+            onDismissRequest = { duplicateBattle = null },
+            title = { Text("Battle Found") },
+            text = {
+                Text("A battle named '${duplicateBattle?.name}' already exists with these players. Would you like to use that one or create a new one anyway?")
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        // Option 1: Use Existing
+                        val id = duplicateBattle?.idBattle
+                        duplicateBattle = null
+                        showDuplicateBattleDialog = false
+                        onBattleCreated() // Navigate using existing battle logic
+                    }
+                ) { Text("Use Existing") }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        battleViewModel.createNewBattle {  }
+                    }
+                ) { Text("Create New") }
             }
         )
     }
