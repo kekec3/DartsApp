@@ -13,7 +13,7 @@ interface GameDAO {
     @Query("SELECT * FROM games")
     fun getAllGames() : Flow<List<Game>>?
 
-    @Query("SELECT * FROM games g JOIN participate p ON g.idGame = p.idGame WHERE p.idPlayer = :player")
+    @Query("SELECT * FROM games g JOIN participate p ON g.idBattle = p.idBattle WHERE p.idPlayer = :player")
     fun getAllGamesByPlayer(player: Int) : Flow<List<Game>>?
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)

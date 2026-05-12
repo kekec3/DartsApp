@@ -8,5 +8,5 @@ import androidx.room.PrimaryKey
 data class Player (
     @PrimaryKey(autoGenerate = true) val idPlayer: Int = 0,
     @ColumnInfo(name = "username") val username: String,
-    @ColumnInfo(name = "avatar") val avatar: String
+    @ColumnInfo(name = "avatar") val avatar: String = ""
 )
