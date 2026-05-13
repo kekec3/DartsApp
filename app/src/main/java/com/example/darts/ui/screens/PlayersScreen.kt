@@ -24,7 +24,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.darts.db.entities.Battle
 import com.example.darts.db.entities.Player
-import com.example.darts.ui.viewModels.BattleViewModel
+import com.example.darts.viewModel.BattleViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
