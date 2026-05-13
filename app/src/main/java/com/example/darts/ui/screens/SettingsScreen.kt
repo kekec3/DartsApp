@@ -21,49 +21,50 @@ import androidx.compose.ui.unit.sp
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onBack: () -> Unit = {}
 ) {
     var darkMode by remember { mutableStateOf(true) }
     var soundEffects by remember { mutableStateOf(true) }
     var vibration by remember { mutableStateOf(true) }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                        Text("Settings", fontWeight = FontWeight.Bold, fontSize = 20.sp)
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = { /* Back */ }) {
-                        Icon(Icons.Default.KeyboardArrowLeft, contentDescription = "Back", tint = Color.White)
-                    }
-                },
-                actions = {
-                    IconButton(onClick = { /* Add/Action */ }) {
-                        Icon(Icons.Default.Add, contentDescription = "Add", tint = Color.White)
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Black)
-            )
-        },
-        bottomBar = { DartsBottomBar() } // Ensure this uses the green "Settings" active state
-    ) { innerPadding ->
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .background(Color.Black)
+    ) {
+        TopAppBar(
+            title = {
+                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    Text("Settings", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = Color.White)
+                }
+            },
+            navigationIcon = {
+                IconButton(onClick = onBack) {
+                    Icon(Icons.Default.KeyboardArrowLeft, contentDescription = "Back", tint = Color.White)
+                }
+            },
+            actions = {
+                // Action icon placeholder or "Save" button
+                IconButton(onClick = { /* Add/Save Action */ }) {
+                    Icon(Icons.Default.Add, contentDescription = "Action", tint = Color(0xFF76B947))
+                }
+            },
+            colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Black)
+        )
+
         Column(
-            modifier = modifier
-                .padding(innerPadding)
+            modifier = Modifier
                 .fillMaxSize()
-                .background(Color.Black)
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp)
         ) {
             // --- GENERAL SECTION ---
-            SettingsCategoryLabel("GENERAL")
-            SettingsPlainRow("Default Game", "501")
-            SettingsPlainRow("Default Match Format", "Best of 5")
+            SettingsCategoryLabel("GAME DEFAULTS")
+            SettingsPlainRow("Starting Score", "501")
+            SettingsPlainRow("Match Format", "Best of 5 Legs")
             SettingsPlainRow("Checkout Rule", "Double Out")
-            SettingsPlainRow("First to Throw", "Player 1")
+            SettingsPlainRow("Starting Player", "Random")
 
             Spacer(modifier = Modifier.height(24.dp))
 
@@ -75,9 +76,9 @@ fun SettingsScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // --- ABOUT SECTION ---
-            SettingsCategoryLabel("ABOUT")
-            SettingsPlainRow("About Dart Score", "")
+            // --- ACCOUNT & ABOUT ---
+            SettingsCategoryLabel("SYSTEM")
+            SettingsPlainRow("Export Data", "CSV / JSON")
             SettingsPlainRow("Version", "1.0.0")
 
             Spacer(modifier = Modifier.height(40.dp))
@@ -89,10 +90,10 @@ fun SettingsScreen(
 fun SettingsCategoryLabel(label: String) {
     Text(
         text = label,
-        color = Color.Gray,
+        color = Color(0xFF76B947),
         fontSize = 12.sp,
-        fontWeight = FontWeight.Bold,
-        modifier = Modifier.padding(vertical = 12.dp)
+        fontWeight = FontWeight.ExtraBold,
+        modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
     )
 }
 
@@ -102,15 +103,15 @@ fun SettingsPlainRow(label: String, value: String) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable { /* Navigate */ }
-                .padding(vertical = 16.dp),
+                .clickable { /* Handle Setting Navigation */ }
+                .padding(vertical = 18.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(label, color = Color.White, fontSize = 16.sp)
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (value.isNotEmpty()) {
-                    Text(value, color = Color.Gray, fontSize = 15.sp)
+                    Text(value, color = Color.Gray, fontSize = 14.sp)
                     Spacer(modifier = Modifier.width(8.dp))
                 }
                 Icon(
@@ -121,7 +122,7 @@ fun SettingsPlainRow(label: String, value: String) {
                 )
             }
         }
-        HorizontalDivider(color = Color.DarkGray.copy(alpha = 0.5f), thickness = 0.5.dp)
+        HorizontalDivider(color = Color.DarkGray.copy(alpha = 0.3f), thickness = 0.5.dp)
     }
 }
 
@@ -131,7 +132,7 @@ fun SettingsSwitchRowPlain(label: String, checked: Boolean, onCheckedChange: (Bo
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 8.dp),
+                .padding(vertical = 10.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -141,12 +142,13 @@ fun SettingsSwitchRowPlain(label: String, checked: Boolean, onCheckedChange: (Bo
                 onCheckedChange = onCheckedChange,
                 colors = SwitchDefaults.colors(
                     checkedThumbColor = Color.White,
-                    checkedTrackColor = Color(0xFF76B947), // Matches the green in the image
+                    checkedTrackColor = Color(0xFF76B947),
                     uncheckedThumbColor = Color.Gray,
-                    uncheckedTrackColor = Color(0xFF333333)
+                    uncheckedTrackColor = Color(0xFF2A2A2A),
+                    uncheckedBorderColor = Color.Transparent
                 )
             )
         }
-        HorizontalDivider(color = Color.DarkGray.copy(alpha = 0.5f), thickness = 0.5.dp)
+        HorizontalDivider(color = Color.DarkGray.copy(alpha = 0.3f), thickness = 0.5.dp)
     }
 }

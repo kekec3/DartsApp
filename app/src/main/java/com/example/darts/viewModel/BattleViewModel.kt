@@ -102,9 +102,9 @@ class BattleViewModel @Inject constructor(
                     _battleName.value,
                     _selectedPlayerIds.value.toList()
                 )
+                onSuccess(battleId)
             }
         }
-        onSuccess(battleId)
     }
     fun createNewBattle(onSuccess: (Int) -> Unit){
         var battleId = 0

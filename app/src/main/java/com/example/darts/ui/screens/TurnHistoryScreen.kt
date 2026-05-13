@@ -13,79 +13,77 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TurnHistoryScreen(
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onBack: () -> Unit = {}
 ) {
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text("Turn History", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-                },
-                navigationIcon = {
-                    IconButton(onClick = { /* TODO */ }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background
-                )
-            )
-        }
-    ) { innerPadding ->
-        Column(
-            modifier = modifier
-                .padding(innerPadding)
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background)
-        ) {
-            // Player Comparison Header
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 20.dp),
-                horizontalArrangement = Arrangement.SpaceEvenly
-            ) {
-                HistoryPlayerHeader("John", isActive = true)
-                HistoryPlayerHeader("Mike", isActive = false)
-            }
-
-            val historyItems = listOf(
-                TurnEntry("T20", "60", "421"),
-                TurnEntry("S19", "19", "402"),
-                TurnEntry("D16", "32", "370"),
-                TurnEntry("S10", "10", "360"),
-                TurnEntry("T20", "60", "300")
-            )
-
-            LazyColumn(
-                modifier = Modifier.weight(1f),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                items(historyItems) { entry ->
-                    HistoryCard(entry)
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .background(Color.Black)
+    ) {
+        TopAppBar(
+            title = {
+                Text("Turn History", fontWeight = FontWeight.Bold, color = Color.White)
+            },
+            navigationIcon = {
+                IconButton(onClick = onBack) {
+                    Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
                 }
-            }
+            },
+            colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Black)
+        )
 
-            // Bottom Action
+        // Player Comparison Header
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 24.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly
+        ) {
+            HistoryPlayerHeader("John", isActive = true)
+            HistoryPlayerHeader("Mike", isActive = false)
+        }
+
+        val historyItems = listOf(
+            TurnEntry("T20", "60", "421", "501"),
+            TurnEntry("S19", "19", "402", "501"),
+            TurnEntry("D16", "32", "370", "501"),
+            TurnEntry("S10", "10", "360", "501"),
+            TurnEntry("T20", "60", "300", "501")
+        )
+
+        LazyColumn(
+            modifier = Modifier.weight(1f),
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            items(historyItems) { entry ->
+                HistoryCard(entry)
+            }
+        }
+
+        // Action Section
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            color = Color.Black
+        ) {
             TextButton(
-                onClick = { /* TODO */ },
+                onClick = { /* Handle Clear */ },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 16.dp)
+                    .padding(vertical = 16.dp)
             ) {
                 Text(
-                    "CLEAR HISTORY",
-                    color = Color.Red,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 1.sp
+                    "UNDO LAST TURN",
+                    color = Color(0xFF76B947),
+                    fontWeight = FontWeight.ExtraBold,
+                    letterSpacing = 1.2.sp
                 )
             }
         }
@@ -96,34 +94,33 @@ fun TurnHistoryScreen(
 fun HistoryCard(entry: TurnEntry) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = Color(0xFF1E1E1E)
-        )
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1A))
     ) {
         Row(
             modifier = Modifier
-                .padding(horizontal = 20.dp, vertical = 18.dp)
+                .padding(20.dp)
                 .fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            // Left: The hit (e.g., T20)
+            // Left: The Scoring Hit
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = entry.hit,
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = Color.Green
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Black,
+                    color = Color(0xFF76B947)
                 )
                 Text(
-                    text = "Score: ${entry.playerOneRemaining}", // Example of detail we can add
+                    text = "Score: ${entry.points}",
                     fontSize = 12.sp,
-                    color = Color.Gray
+                    color = Color.Gray,
+                    fontWeight = FontWeight.Bold
                 )
             }
 
-            // Right: Comparison of Remaining Scores
+            // Right: Remaining Comparison
             Row(
                 modifier = Modifier.weight(1.5f),
                 horizontalArrangement = Arrangement.End,
@@ -131,23 +128,23 @@ fun HistoryCard(entry: TurnEntry) {
             ) {
                 Text(
                     text = entry.playerOneRemaining,
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Bold,
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.ExtraBold,
                     color = Color.White
                 )
 
                 Text(
-                    text = "/",
-                    modifier = Modifier.padding(horizontal = 8.dp),
+                    text = "|",
+                    modifier = Modifier.padding(horizontal = 12.dp),
                     color = Color.DarkGray,
                     fontSize = 20.sp
                 )
 
                 Text(
                     text = entry.playerTwoRemaining,
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.Gray
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = Color.DarkGray
                 )
             }
         }
@@ -158,23 +155,28 @@ fun HistoryCard(entry: TurnEntry) {
 fun HistoryPlayerHeader(name: String, isActive: Boolean) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
-            text = name,
-            fontSize = 18.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = if (isActive) Color.White else Color.Gray
+            text = name.uppercase(),
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Black,
+            color = if (isActive) Color.White else Color.DarkGray,
+            letterSpacing = 1.sp
         )
-        Spacer(modifier = Modifier.height(6.dp))
+        Spacer(modifier = Modifier.height(8.dp))
         Box(
             modifier = Modifier
-                .width(40.dp)
-                .height(3.dp)
-                .background(if (isActive) Color.Green else Color.Transparent, RoundedCornerShape(2.dp))
+                .width(32.dp)
+                .height(4.dp)
+                .background(
+                    color = if (isActive) Color(0xFF76B947) else Color.Transparent,
+                    shape = RoundedCornerShape(2.dp)
+                )
         )
     }
 }
 
 data class TurnEntry(
     val hit: String,
+    val points: String,
     val playerOneRemaining: String,
     val playerTwoRemaining: String
 )

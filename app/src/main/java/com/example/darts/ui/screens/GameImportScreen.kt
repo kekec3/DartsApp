@@ -22,37 +22,40 @@ import androidx.compose.ui.unit.sp
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GameImportScreen(
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onBack: () -> Unit // Added a callback for the back button
 ) {
     var isFileSelected by remember { mutableStateOf(false) }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                        Text("Import Game", fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = { /* Back */ }) {
-                        Icon(Icons.Default.KeyboardArrowLeft, contentDescription = "Back", tint = Color.White)
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Black)
-            )
-        }
-    ) { innerPadding ->
+    // Use Column as the root layout
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .background(Color.Black)
+    ) {
+        // 1. Top Bar is still here but as a standalone component
+        TopAppBar(
+            title = {
+                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    Text("Import Game", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = Color.White)
+                }
+            },
+            navigationIcon = {
+                IconButton(onClick = onBack) {
+                    Icon(Icons.Default.KeyboardArrowLeft, contentDescription = "Back", tint = Color.White)
+                }
+            },
+            colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Black)
+        )
+
+        // 2. Screen Content
         Column(
-            modifier = modifier
-                .padding(innerPadding)
-                .fillMaxSize()
-                .background(Color.Black)
+            modifier = Modifier
+                .weight(1f)
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             if (!isFileSelected) {
-                // Upload/Select Area
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -62,7 +65,7 @@ fun GameImportScreen(
                             shape = RoundedCornerShape(16.dp)
                         )
                         .padding(16.dp)
-                        .clickable { isFileSelected = true }, // Simulate file selection
+                        .clickable { isFileSelected = true },
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -82,7 +85,6 @@ fun GameImportScreen(
                     }
                 }
             } else {
-                // Preview of what is being imported
                 Text(
                     "Match Preview",
                     color = Color.White,
@@ -106,7 +108,6 @@ fun GameImportScreen(
 
             Spacer(modifier = Modifier.weight(1f))
 
-            // Action Button
             Button(
                 onClick = { /* Import Logic */ },
                 enabled = isFileSelected,

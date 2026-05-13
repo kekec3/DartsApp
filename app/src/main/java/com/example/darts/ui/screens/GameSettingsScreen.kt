@@ -19,66 +19,39 @@ import androidx.compose.ui.unit.sp
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GameSettingsScreen(
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onBack: () -> Unit = {}
 ) {
     var showSuggestions by remember { mutableStateOf(true) }
     var showAnimations by remember { mutableStateOf(true) }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                        Text("Game Settings", fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = { /* Back */ }) {
-                        Icon(Icons.Default.KeyboardArrowLeft, contentDescription = "Back", tint = Color.White)
-                    }
-                },
-                actions = {
-                    // Placeholder for the top-right dart icon seen in image
-                    IconButton(onClick = { }) {
-                        Icon(Icons.Default.KeyboardArrowRight, contentDescription = null, tint = Color.Gray)
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Black)
-            )
-        },
-        bottomBar = {
-            // Reset and Save Buttons
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(Color.Black)
-                    .padding(16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "RESET TO DEFAULTS",
-                    color = Color.White,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.clickable { /* Reset */ }
-                )
-                Button(
-                    onClick = { /* Save */ },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF76B947)),
-                    shape = RoundedCornerShape(8.dp),
-                    modifier = Modifier.width(140.dp)
-                ) {
-                    Text("SAVE", color = Color.Black, fontWeight = FontWeight.ExtraBold)
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .background(Color.Black)
+    ) {
+        TopAppBar(
+            title = {
+                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    Text("Game Settings", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = Color.White)
                 }
-            }
-        }
-    ) { innerPadding ->
+            },
+            navigationIcon = {
+                IconButton(onClick = onBack) {
+                    Icon(Icons.Default.KeyboardArrowLeft, contentDescription = "Back", tint = Color.White)
+                }
+            },
+            actions = {
+                IconButton(onClick = { }) {
+                    Icon(Icons.Default.KeyboardArrowRight, contentDescription = null, tint = Color.Gray)
+                }
+            },
+            colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Black)
+        )
+
         Column(
-            modifier = modifier
-                .padding(innerPadding)
-                .fillMaxSize()
-                .background(Color.Black)
+            modifier = Modifier
+                .weight(1f)
                 .padding(16.dp)
         ) {
             Card(
@@ -97,11 +70,36 @@ fun GameSettingsScreen(
                     SettingsRow("First to Throw", "Player 1")
                     SettingsDivider()
 
-                    // Switch Rows
                     SettingsSwitchRow("Show Suggestions", showSuggestions) { showSuggestions = it }
                     SettingsDivider()
                     SettingsSwitchRow("Show Animations", showAnimations) { showAnimations = it }
                 }
+            }
+        }
+
+        // Action Buttons at the bottom
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Color.Black)
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "RESET TO DEFAULTS",
+                color = Color.White,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.clickable { /* Reset */ }
+            )
+            Button(
+                onClick = { /* Save */ },
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF76B947)),
+                shape = RoundedCornerShape(8.dp),
+                modifier = Modifier.width(140.dp)
+            ) {
+                Text("SAVE", color = Color.Black, fontWeight = FontWeight.ExtraBold)
             }
         }
     }

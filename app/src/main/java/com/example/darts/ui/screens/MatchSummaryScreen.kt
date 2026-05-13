@@ -8,7 +8,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Star // Using Star as a proxy for Trophy
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -19,35 +19,37 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MatchSummaryScreen(
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onNavigateHome: () -> Unit = {}
 ) {
-    Scaffold { innerPadding ->
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+    ) {
         Column(
-            modifier = modifier
-                .padding(innerPadding)
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background)
+            modifier = Modifier
+                .weight(1f)
                 .verticalScroll(rememberScrollState())
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Trophy / Winner Icon
+            // Winner Icon
             Surface(
                 modifier = Modifier.size(100.dp),
                 shape = CircleShape,
-                color = Color(0xFF2E7D32)
+                color = Color(0xFF1B5E20) // Deep green background
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
                         imageVector = Icons.Default.Star,
                         contentDescription = "Winner",
                         modifier = Modifier.size(50.dp),
-                        tint = Color.Green
+                        tint = Color(0xFF76B947)
                     )
                 }
             }
@@ -86,17 +88,16 @@ fun MatchSummaryScreen(
                 MatchStatRow("180s", "2", "0", highlightLeft = true)
             }
 
-            Spacer(modifier = Modifier.weight(1f))
             Spacer(modifier = Modifier.height(40.dp))
 
             // Back to Home Button
             Button(
-                onClick = { /* Navigate Home */ },
+                onClick = onNavigateHome,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(60.dp),
                 shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color.Green)
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF76B947))
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.Home, contentDescription = null, tint = Color.Black)
@@ -129,7 +130,7 @@ fun MatchStatRow(
             modifier = Modifier.weight(1f),
             fontSize = 20.sp,
             fontWeight = FontWeight.Bold,
-            color = if (highlightLeft) Color.Green else Color.White,
+            color = if (highlightLeft) Color(0xFF76B947) else Color.White,
             textAlign = TextAlign.Start
         )
 
