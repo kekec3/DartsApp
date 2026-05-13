@@ -13,6 +13,7 @@ roomDatabase = "2.8.3"
 navigationCompose = "2.9.5"
 hilt = "2.57"
 lifecycleViewmodelCompose = "2.9.4"
+foundation = "1.11.0"
 
 
 [libraries]
@@ -39,6 +40,7 @@ hilt-android = { group = "com.google.dagger", name = "hilt-android", version.ref
 hilt-compiler = { group = "com.google.dagger", name = "hilt-compiler", version.ref = "hilt" }
 androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigationCompose" }
 androidx-compose-material-icons-core = { group = "androidx.compose.material", name = "material-icons-core" }
+androidx-compose-foundation = { group = "androidx.compose.foundation", name = "foundation", version.ref = "foundation" }
 
 
 [plugins]

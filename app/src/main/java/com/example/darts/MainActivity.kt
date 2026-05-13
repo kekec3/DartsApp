@@ -1,5 +1,6 @@
 package com.example.darts
 
+import android.annotation.SuppressLint
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -15,9 +16,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.sp
-import com.example.darts.ui.screens.BattlesScreen
+import com.example.darts.ui.GameScreen
 import com.example.darts.ui.screens.GameImportScreen
-import com.example.darts.ui.screens.GameScreen
 import com.example.darts.ui.screens.GameSettingsScreen
 import com.example.darts.ui.screens.GameSharingScreen
 import com.example.darts.ui.screens.HomeScreen
@@ -30,15 +30,16 @@ import com.example.darts.ui.screens.PlayersScreen
 import com.example.darts.ui.screens.SettingsScreen
 import com.example.darts.ui.screens.StatisticsOverviewScreen
 import com.example.darts.ui.screens.TurnHistoryScreen
-import com.example.darts.ui.screens.score_entry.BoardButtonsScreen
 import com.example.darts.ui.screens.score_entry.CameraScanScreen
 import com.example.darts.ui.screens.score_entry.TypeAndEnterScreen
 import com.example.darts.ui.screens.score_entry.VoiceRecognitionScreen
 import com.example.darts.ui.theme.DartsTheme
+import com.example.darts.viewModel.GameViewModelX01
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+    @SuppressLint("ViewModelConstructorInComposable")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -48,7 +49,7 @@ class MainActivity : ComponentActivity() {
                     Column(
                         modifier = Modifier.fillMaxSize()
                     ) {
-                        GreetingPreview()
+                        GameScreen(GameViewModelX01())
                     }
                 }
             }
@@ -61,5 +62,4 @@ class MainActivity : ComponentActivity() {
 @Preview(showBackground = true)
 @Composable
 fun GreetingPreview() {
-    PlayersScreen()
 }
