@@ -74,6 +74,7 @@ class BattleViewModel @Inject constructor(
         onSuccess: (Int) -> Unit,
         onDuplicateFound: (Battle) -> Unit
     ) {
+        var battleId = 0
         viewModelScope.launch {
             val currentSelection = _selectedPlayerIds.value.sorted()
             var existingBattle: Battle? = null
@@ -97,20 +98,22 @@ class BattleViewModel @Inject constructor(
             if (existingBattle != null) {
                 onDuplicateFound(existingBattle)
             } else {
-                repository.createBattleWithPlayers(
+                battleId = repository.createBattleWithPlayers(
                     _battleName.value,
                     _selectedPlayerIds.value.toList()
                 )
             }
         }
+        onSuccess(battleId)
     }
-    fun createNewBattle(onSuccess: () -> Unit) {
+    fun createNewBattle(onSuccess: (Int) -> Unit){
+        var battleId = 0
         viewModelScope.launch {
-            repository.createBattleWithPlayers(
+            battleId = repository.createBattleWithPlayers(
                 _battleName.value,
                 _selectedPlayerIds.value.toList()
             )
-            onSuccess()
         }
+        onSuccess(battleId)
     }
 }

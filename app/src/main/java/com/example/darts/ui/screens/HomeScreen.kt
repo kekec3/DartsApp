@@ -19,6 +19,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.darts.R
+import com.example.darts.ui.navigation.BattlesRoute
 
 // -------------------- ICONS --------------------
 
@@ -35,7 +36,8 @@ object AppIcons {
 data class MenuItemData(
     val title: String,
     val subtitle: String,
-    val icon: Painter
+    val icon: Painter,
+    val onClick: () -> Unit
 )
 
 // -------------------- SCREEN --------------------
@@ -43,14 +45,17 @@ data class MenuItemData(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onViewBattles: ()-> Unit = {},
+    onViewPlayers:()-> Unit = {},
+    onViewStats:()-> Unit = {}
 ) {
     val items = listOf(
-        MenuItemData("Battles", "View your battles", AppIcons.Battles),
-        MenuItemData("Players", "Manage players", AppIcons.Players),
-        MenuItemData("Statistics", "View stats & insights", AppIcons.Statistics),
-        MenuItemData("Moments", "Your best moments", AppIcons.Moments),
-        MenuItemData("Map", "Where you've played", AppIcons.Map)
+        MenuItemData("Battles", "View your battles", AppIcons.Battles, onViewBattles),
+        MenuItemData("Players", "Manage players", AppIcons.Players, onViewPlayers),
+        MenuItemData("Statistics", "View stats & insights", AppIcons.Statistics, onViewStats),
+        MenuItemData("Moments", "Your best moments", AppIcons.Moments,{}),
+        MenuItemData("Map", "Where you've played", AppIcons.Map,{})
     )
 
     Scaffold(
@@ -98,7 +103,7 @@ fun HomeScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             items.forEach {
-                MenuItem(it.title, it.subtitle, it.icon)
+                MenuItem(it.title, it.subtitle, it.icon, it.onClick)
             }
         }
     }
@@ -149,7 +154,8 @@ fun PrimaryActionButton(
 fun MenuItem(
     title: String,
     subtitle: String,
-    icon: Painter
+    icon: Painter,
+    onClick: ()->Unit
 ) {
     Row(
         modifier = Modifier
@@ -157,7 +163,7 @@ fun MenuItem(
             .padding(vertical = 4.dp)
             .clip(RoundedCornerShape(18.dp))
             .background(MaterialTheme.colorScheme.surface)
-            .clickable { }
+            .clickable { onClick()}
             .padding(horizontal = 18.dp, vertical = 24.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {

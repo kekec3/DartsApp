@@ -17,7 +17,7 @@ class BattleRepository @Inject constructor(
     // Get all available players for selection
     fun getAllPlayers(): Flow<List<Player>> = playerDao.getAllPlayers()
 
-    suspend fun createBattleWithPlayers(name: String, playerIds: List<Int>) {
+    suspend fun createBattleWithPlayers(name: String, playerIds: List<Int>): Int {
         val battle = Battle(
             name = name,
             dateCreated = System.currentTimeMillis().toString()
@@ -27,6 +27,7 @@ class BattleRepository @Inject constructor(
         for(p in playerIds){
             participateDao.addParticipation(Participate(idBattle = battleId, idPlayer = p))
         }
+        return battleId
     }
 
     suspend fun insertPlayer(player:Player) : Long{

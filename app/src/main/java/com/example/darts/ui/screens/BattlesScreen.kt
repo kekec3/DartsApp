@@ -19,7 +19,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.example.darts.db.entities.Battle
 import com.example.darts.viewModel.BattleViewModel
 import java.time.Instant
@@ -31,7 +31,9 @@ import java.time.format.DateTimeFormatter
 @Composable
 fun BattlesScreen(
     modifier: Modifier = Modifier,
-    battleViewModel: BattleViewModel = hiltViewModel()
+    battleViewModel: BattleViewModel = hiltViewModel(),
+    onBattleClick: (Int)->Unit = {},
+    addBattle: ()->Unit = {}
 ) {
     val battles by battleViewModel.allBattles.collectAsState()
 
@@ -46,7 +48,7 @@ fun BattlesScreen(
                     )
                 },
                 actions = {
-                    IconButton(onClick = { /* TODO */ }) {
+                    IconButton(onClick = { addBattle() }) {
                         Icon(
                             Icons.Default.Add,
                             contentDescription = "Add Battle",

@@ -21,7 +21,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.example.darts.db.entities.Battle
 import com.example.darts.db.entities.Player
 import com.example.darts.viewModel.BattleViewModel
@@ -30,8 +30,8 @@ import com.example.darts.viewModel.BattleViewModel
 @Composable
 fun PlayersScreen(
     modifier: Modifier = Modifier,
-    battleViewModel: BattleViewModel = hiltViewModel(), // Use hiltViewModel
-    onBattleCreated: () -> Unit = {}
+    battleViewModel: BattleViewModel = hiltViewModel(),
+    onBattleCreated: (Int) -> Unit = {}
 ) {
     var searchQuery by remember { mutableStateOf("") }
     var showAddPlayerDialog by remember { mutableStateOf(false) }
@@ -75,7 +75,7 @@ fun PlayersScreen(
                         battleViewModel.saveBattle(
                             onSuccess = { newId ->
                                 showBattleNameDialog = false
-                                onBattleCreated() // Or pass newId if your navigation needs it
+                                onBattleCreated(newId)
                             },
                             onDuplicateFound = { existing ->
                                 showBattleNameDialog = false
@@ -107,7 +107,7 @@ fun PlayersScreen(
                         val id = duplicateBattle?.idBattle
                         duplicateBattle = null
                         showDuplicateBattleDialog = false
-                        onBattleCreated() // Navigate using existing battle logic
+                        //onBattleCreated(id?(id:0)) // Navigate using existing battle logic
                     }
                 ) { Text("Use Existing") }
             },
