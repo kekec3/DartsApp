@@ -24,10 +24,8 @@ class BattleRepository @Inject constructor(
         )
         val battleId = battleDao.insertBattle(battle).toInt()
 
-        // Link players to this battle
-        // (Assuming you have a BattleParticipant entity or similar logic in your DAO)
         for(p in playerIds){
-            participateDao.addParticipation(Participate(battleId, p))
+            participateDao.addParticipation(Participate(idBattle = battleId, idPlayer = p))
         }
     }
 
@@ -36,4 +34,6 @@ class BattleRepository @Inject constructor(
     }
 
     fun getAllBattles(): Flow<List<Battle>> = battleDao.getAllBattles()
+
+    fun getPlayersOfBattle(id: Int) : Flow<List<Player>> = battleDao.getPlayersInBattle(id)
 }

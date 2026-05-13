@@ -15,6 +15,6 @@ interface BattleDAO {
     @Query("SELECT * FROM battles ORDER BY idBattle DESC")
     fun getAllBattles(): Flow<List<Battle>>
 
-    @Query("SELECT p.* FROM players p JOIN participate pa WHERE idBattle = :battleId")
+    @Query("SELECT p.* FROM players p JOIN participate pa ON p.idPlayer = pa.idPlayer WHERE pa.idBattle = :battleId")
     fun getPlayersInBattle(battleId: Int): Flow<List<Player>>
 }
