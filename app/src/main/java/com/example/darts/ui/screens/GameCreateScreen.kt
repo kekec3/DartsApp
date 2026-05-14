@@ -1,5 +1,6 @@
 package com.example.darts.ui.screens
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -12,10 +13,10 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Place
+import androidx.compose.material.icons.filled.List
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -33,17 +34,18 @@ fun GameCreateScreen(
     battleId: Int,
     viewModel: GameCreationViewModel,
     onNewGame: () -> Unit,
-    onLegSummary: (Int) -> Unit,    // Navigates to individual game stats
-    onMatchSummary: (Int) -> Unit,  // Navigates to full battle stats
+    onLegSummary: (Int) -> Unit,
+    onMatchSummary: (Int) -> Unit,
     onBack: () -> Unit
 ) {
-    // 1. Initialize data loading for the specific battle context
+    // 1. Initialize data loading
     LaunchedEffect(battleId) {
         viewModel.loadBattle(battleId)
     }
 
-    // 2. Observe the list of games belonging to this battle
+    // 2. State Observation
     val games by viewModel.games.collectAsStateWithLifecycle()
+    var isMapView by remember { mutableStateOf(false) }
 
     Scaffold(
         containerColor = Color.Black,
@@ -67,6 +69,16 @@ fun GameCreateScreen(
                         )
                     }
                 },
+                actions = {
+                    // TOGGLE BUTTON: Switch between List and Map
+                    IconButton(onClick = { isMapView = !isMapView }) {
+                        Icon(
+                            imageVector = if (isMapView) Icons.Default.List else Icons.Default.Place,
+                            contentDescription = "Toggle View",
+                            tint = if (isMapView) Color(0xFF76B947) else Color.White
+                        )
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Black)
             )
         },
@@ -85,50 +97,59 @@ fun GameCreateScreen(
             }
         }
     ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .padding(innerPadding)
-                .fillMaxSize()
-                .padding(horizontal = 20.dp)
-        ) {
-            Spacer(modifier = Modifier.height(16.dp))
 
-            // --- MATCH SUMMARY CARD ---
-            // Leads to the total battle summary using the battleId
-            MatchSummaryHeader(
-                gameCount = games.size,
-                onClick = { onMatchSummary(battleId) }
-            )
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Text(
-                text = "GAMES HISTORY",
-                color = Color(0xFF76B947),
-                fontSize = 12.sp,
-                fontWeight = FontWeight.ExtraBold,
-                letterSpacing = 1.2.sp
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            if (games.isEmpty()) {
-                EmptyGamesPlaceholder()
+        AnimatedContent(
+            targetState = isMapView,
+            label = "ViewTransition",
+            modifier = Modifier.padding(innerPadding)
+        ) { targetIsMapView ->
+            if (targetIsMapView) {
+                // --- CALLING YOUR STANDALONE MAP SCREEN ---
+                MapScreen(games = games)
             } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    contentPadding = PaddingValues(bottom = 80.dp)
+                // --- LIST VIEW ---
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 20.dp)
                 ) {
-                    items(
-                        items = games,
-                        key = { it.idGame }
-                    ) { game ->
-                        // Each item leads to its own Leg Summary using the gameId
-                        GameItem(
-                            game = game,
-                            onClick = { onLegSummary(game.idGame) }
-                        )
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    MatchSummaryHeader(
+                        gameCount = games.size,
+                        onClick = { onMatchSummary(battleId) }
+                    )
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    Text(
+                        text = "GAMES HISTORY",
+                        color = Color(0xFF76B947),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        letterSpacing = 1.2.sp
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    if (games.isEmpty()) {
+                        EmptyGamesPlaceholder()
+                    } else {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                            contentPadding = PaddingValues(bottom = 80.dp)
+                        ) {
+                            items(
+                                items = games,
+                                key = { it.idGame }
+                            ) { game ->
+                                GameItem(
+                                    game = game,
+                                    onClick = { onLegSummary(game.idGame) }
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -151,19 +172,9 @@ fun MatchSummaryHeader(gameCount: Int, onClick: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "Match Overview",
-                    color = Color.White,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 18.sp
-                )
-                Text(
-                    text = "$gameCount games recorded in this session",
-                    color = Color.Gray,
-                    fontSize = 13.sp
-                )
+                Text("Match Overview", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                Text("$gameCount games recorded", color = Color.Gray, fontSize = 13.sp)
             }
-
             Surface(
                 color = Color(0xFF76B947).copy(alpha = 0.1f),
                 shape = RoundedCornerShape(8.dp)
@@ -197,71 +208,29 @@ fun GameItem(game: Game, onClick: () -> Unit) {
                 .background(Color(0xFF252525), RoundedCornerShape(10.dp)),
             contentAlignment = Alignment.Center
         ) {
-            Text(
-                text = game.type.take(1).uppercase(),
-                color = Color(0xFF76B947),
-                fontWeight = FontWeight.Black,
-                fontSize = 18.sp
-            )
+            Text(game.type.take(1).uppercase(), color = Color(0xFF76B947), fontWeight = FontWeight.Black, fontSize = 18.sp)
         }
-
         Spacer(modifier = Modifier.width(16.dp))
-
         Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = "Game #${game.idGame}",
-                color = Color.White,
-                fontWeight = FontWeight.Bold,
-                fontSize = 16.sp
-            )
+            Text("Game #${game.idGame}", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
             Row(verticalAlignment = Alignment.CenterVertically) {
-                // Pin icon indicates a location-tagged leg
                 if (game.location.isNotEmpty() && game.location != "0.0,0.0") {
-                    Icon(
-                        imageVector = Icons.Default.LocationOn,
-                        contentDescription = null,
-                        tint = Color(0xFF76B947),
-                        modifier = Modifier.size(12.dp)
-                    )
+                    Icon(Icons.Default.LocationOn, null, tint = Color(0xFF76B947), modifier = Modifier.size(12.dp))
                     Spacer(modifier = Modifier.width(4.dp))
                 }
-                Text(
-                    text = "${game.type} • ${game.date}",
-                    color = Color.Gray,
-                    fontSize = 13.sp
-                )
+                Text("${game.type} • ${game.date}", color = Color.Gray, fontSize = 13.sp)
             }
         }
-
-        Icon(
-            imageVector = Icons.Default.KeyboardArrowRight,
-            contentDescription = null,
-            tint = Color.DarkGray
-        )
+        Icon(Icons.Default.KeyboardArrowRight, null, tint = Color.DarkGray)
     }
 }
 
 @Composable
 fun EmptyGamesPlaceholder() {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = 60.dp),
-        contentAlignment = Alignment.Center
-    ) {
+    Box(modifier = Modifier.fillMaxWidth().padding(top = 60.dp), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(
-                text = "No games yet",
-                color = Color.DarkGray,
-                fontWeight = FontWeight.Bold,
-                fontSize = 16.sp
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = "Tap + to start the first leg",
-                color = Color.Gray,
-                fontSize = 14.sp
-            )
+            Text("No games yet", color = Color.DarkGray, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+            Text("Tap + to start the first leg", color = Color.Gray, fontSize = 14.sp)
         }
     }
 }
