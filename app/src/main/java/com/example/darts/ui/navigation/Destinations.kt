@@ -14,4 +14,5 @@ data class GameRoute(val gameId: Int)
 
 @Serializable
 data class GameSettingsRoute(val battleId: Int)
-@Serializable data class GameCreateScreenRoute(val battleId: Int)
+@Serializable data class GameCreateScreenRoute(val battleId: Int)@Serializable data class LegSummaryRoute(val gameId: Int)    // New
+@Serializable data class MatchSummaryRoute(val battleId: Int) // New

@@ -19,6 +19,8 @@ import androidx.compose.ui.unit.sp
 @Composable
 fun LegSummaryScreen(
     modifier: Modifier = Modifier,
+    gameId: Int,
+    onBack: () -> Unit,
     onContinue: () -> Unit = {}
 ) {
     Column(

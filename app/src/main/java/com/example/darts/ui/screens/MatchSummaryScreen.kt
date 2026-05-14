@@ -22,6 +22,8 @@ import androidx.compose.ui.unit.sp
 @Composable
 fun MatchSummaryScreen(
     modifier: Modifier = Modifier,
+    battleId: Int,
+    onBack: () -> Unit,
     onNavigateHome: () -> Unit = {}
 ) {
     Column(

@@ -14,10 +14,12 @@ import com.example.darts.ui.screens.BattlesScreen
 import com.example.darts.ui.screens.GameCreateScreen
 import com.example.darts.ui.screens.GameSettingsScreen
 import com.example.darts.ui.screens.HomeScreen
+import com.example.darts.ui.screens.LegSummaryScreen
+import com.example.darts.ui.screens.MatchSummaryScreen
 import com.example.darts.ui.screens.PlayersScreen
-import com.example.darts.viewModel.BattleViewModel
-import com.example.darts.viewModel.GameCreationViewModel
-import com.example.darts.viewModel.GameViewModelX01
+// Import your summary screens here
+// import com.example.darts.ui.screens.LegSummaryScreen
+// import com.example.darts.ui.screens.MatchSummaryScreen
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
@@ -34,15 +36,14 @@ fun DartsNavGraph(
             HomeScreen(
                 onViewBattles = { navController.navigate(BattlesRoute) },
                 onViewPlayers = { navController.navigate(PlayersRoute) },
-                onViewStats = { navController.navigate(StatsRoute) }
+                onViewStats = { navController.navigate(StatsRoute) } // Global App Stats
             )
         }
 
-        // 2. Battles Screen (History/List of all matches)
+        // 2. Battles Screen
         composable<BattlesRoute> {
-            val viewModel: BattleViewModel = hiltViewModel()
             BattlesScreen(
-                battleViewModel = viewModel,
+                battleViewModel = hiltViewModel(),
                 onBattleClick = { id ->
                     navController.navigate(GameCreateScreenRoute(id))
                 },
@@ -50,38 +51,35 @@ fun DartsNavGraph(
             )
         }
 
-        // 3. Players Screen (Initial Battle Setup)
+        // 3. Players Screen
         composable<PlayersRoute> {
-            val viewModel: BattleViewModel = hiltViewModel()
             PlayersScreen(
-                battleViewModel = viewModel,
+                battleViewModel = hiltViewModel(),
                 onBattleCreated = { id ->
                     navController.navigate(GameCreateScreenRoute(id))
                 }
             )
         }
 
-        // 4. Game Lobby Screen (Shows history of legs for a specific battle)
+        // 4. Game Lobby Screen (Legs List)
         composable<GameCreateScreenRoute> { backStackEntry ->
             val args: GameCreateScreenRoute = backStackEntry.toRoute()
-            val viewModel: GameCreationViewModel = hiltViewModel()
 
             GameCreateScreen(
                 battleId = args.battleId,
-                viewModel = viewModel,
+                viewModel = hiltViewModel(),
                 onNewGame = {
                     navController.navigate(GameSettingsRoute(args.battleId))
                 },
                 onLegSummary = { gameId ->
-                    // Navigate to a specific leg summary (if you have one)
-                    // navController.navigate(LegSummaryRoute(gameId))
+                    // Navigate to stats for a single leg
+                    navController.navigate(LegSummaryRoute(gameId))
                 },
                 onMatchSummary = { battleId ->
-                    // Navigate to overall battle stats
-                    // navController.navigate(StatsRoute(battleId))
+                    // Navigate to aggregate stats for the whole battle
+                    navController.navigate(MatchSummaryRoute(battleId))
                 },
                 onBack = {
-                    // Go back to the list of all battles
                     navController.navigate(BattlesRoute) {
                         popUpTo(HomeRoute) { inclusive = false }
                     }
@@ -89,31 +87,39 @@ fun DartsNavGraph(
             )
         }
 
-        // 5. Game Settings Screen (Optional location tagging happens here)
+        // 5. Game Settings Screen
         composable<GameSettingsRoute> { backStackEntry ->
             val args: GameSettingsRoute = backStackEntry.toRoute()
-            val viewModel: GameCreationViewModel = hiltViewModel()
 
             GameSettingsScreen(
                 battleId = args.battleId,
-                viewModel = viewModel,
+                viewModel = hiltViewModel(),
                 onBack = { navController.popBackStack() },
                 onStartMatch = { gameId ->
-                    // IMPORTANT: We navigate to the game using the newly created Game ID
                     navController.navigate(GameRoute(gameId))
                 }
             )
         }
 
-        // 6. Actual Game Screen (The Scoring interface)
+        // 6. Actual Game Screen
         composable<GameRoute> { backStackEntry ->
             val args: GameRoute = backStackEntry.toRoute()
-            val viewModel: GameViewModelX01 = hiltViewModel()
-
             GameScreen(
-                viewModel = viewModel,
+                viewModel = hiltViewModel(),
                 gameId = args.gameId
             )
+        }
+
+        // 7. Leg Summary Screen (Single Game Stats)
+        composable<LegSummaryRoute> { backStackEntry ->
+            val args: LegSummaryRoute = backStackEntry.toRoute()
+            LegSummaryScreen(gameId = args.gameId, onBack = { navController.popBackStack() })
+        }
+
+        // 8. Match Summary Screen (Whole Battle Stats)
+        composable<MatchSummaryRoute> { backStackEntry ->
+            val args: MatchSummaryRoute = backStackEntry.toRoute()
+            MatchSummaryScreen(battleId = args.battleId, onBack = { navController.popBackStack() })
         }
     }
 }

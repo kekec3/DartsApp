@@ -33,16 +33,16 @@ fun GameCreateScreen(
     battleId: Int,
     viewModel: GameCreationViewModel,
     onNewGame: () -> Unit,
-    onLegSummary: (Int) -> Unit,    // Clicking a specific game
-    onMatchSummary: (Int) -> Unit,  // Clicking the main stats card
+    onLegSummary: (Int) -> Unit,    // Navigates to individual game stats
+    onMatchSummary: (Int) -> Unit,  // Navigates to full battle stats
     onBack: () -> Unit
 ) {
-    // 1. Initialize data loading
+    // 1. Initialize data loading for the specific battle context
     LaunchedEffect(battleId) {
         viewModel.loadBattle(battleId)
     }
 
-    // 2. Observe games list
+    // 2. Observe the list of games belonging to this battle
     val games by viewModel.games.collectAsStateWithLifecycle()
 
     Scaffold(
@@ -94,7 +94,7 @@ fun GameCreateScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             // --- MATCH SUMMARY CARD ---
-            // This is the entry point for the global battle stats
+            // Leads to the total battle summary using the battleId
             MatchSummaryHeader(
                 gameCount = games.size,
                 onClick = { onMatchSummary(battleId) }
@@ -124,6 +124,7 @@ fun GameCreateScreen(
                         items = games,
                         key = { it.idGame }
                     ) { game ->
+                        // Each item leads to its own Leg Summary using the gameId
                         GameItem(
                             game = game,
                             onClick = { onLegSummary(game.idGame) }
@@ -140,9 +141,9 @@ fun MatchSummaryHeader(gameCount: Int, onClick: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
             .clickable { onClick() },
         colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1A)),
-        shape = RoundedCornerShape(16.dp),
         border = BorderStroke(1.dp, Color(0xFF76B947).copy(alpha = 0.2f))
     ) {
         Row(
@@ -157,7 +158,7 @@ fun MatchSummaryHeader(gameCount: Int, onClick: () -> Unit) {
                     fontSize = 18.sp
                 )
                 Text(
-                    text = "$gameCount games in this battle",
+                    text = "$gameCount games recorded in this session",
                     color = Color.Gray,
                     fontSize = 13.sp
                 )
@@ -168,7 +169,7 @@ fun MatchSummaryHeader(gameCount: Int, onClick: () -> Unit) {
                 shape = RoundedCornerShape(8.dp)
             ) {
                 Text(
-                    text = "STATS",
+                    text = "VIEW STATS",
                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                     color = Color(0xFF76B947),
                     fontWeight = FontWeight.Bold,
@@ -214,8 +215,8 @@ fun GameItem(game: Game, onClick: () -> Unit) {
                 fontSize = 16.sp
             )
             Row(verticalAlignment = Alignment.CenterVertically) {
-                // Showing location icon if the game has location data
-                if (game.location.isNotEmpty() && game.location != "0,0") {
+                // Pin icon indicates a location-tagged leg
+                if (game.location.isNotEmpty() && game.location != "0.0,0.0") {
                     Icon(
                         imageVector = Icons.Default.LocationOn,
                         contentDescription = null,

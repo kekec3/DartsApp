@@ -93,7 +93,7 @@ class GameCreationViewModel @Inject constructor(
             val newGameId = gameRepository.createNewGame(newGame)
 
             // 2. Trigger Navigation immediately so the user can play
-            onComplete(newGameId.toInt())
+            onComplete(newGameId)
 
             // 3. Attempt to fetch location in the background and update the record
             try {
