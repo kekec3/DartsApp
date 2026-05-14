@@ -1,42 +1,39 @@
 package com.example.darts.viewModel
 
 import android.annotation.SuppressLint
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.darts.db.entities.Game
 import com.example.darts.db.repositories.GameRepository
 import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.location.Priority
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withTimeoutOrNull
 import java.text.SimpleDateFormat
 import java.util.*
 import javax.inject.Inject
 
-/**
- * ViewModel responsible for managing the "Lobby" state (games in a battle)
- * and the configuration for creating a new game.
- */
 @HiltViewModel
 class GameCreationViewModel @Inject constructor(
     private val gameRepository: GameRepository,
     private val fusedLocationClient: FusedLocationProviderClient
 ) : ViewModel() {
 
-    // --- LOBBY LOGIC ---
+    // ---------------- LOBBY LOGIC ----------------
 
     private val _currentBattleId = MutableStateFlow<Int?>(null)
 
-    /**
-     * Exposes a reactive list of games for the currently loaded battle.
-     * flatMapLatest ensures that if the battleId changes, we switch to the new database flow.
-     */
     @OptIn(ExperimentalCoroutinesApi::class)
     val games: StateFlow<List<Game>> = _currentBattleId
         .filterNotNull()
         .flatMapLatest { id ->
-            gameRepository.getGamesByBattle(id) ?: flowOf(emptyList())
+            gameRepository.getGamesByBattle(id)
+                ?: flowOf(emptyList())
         }
         .stateIn(
             scope = viewModelScope,
@@ -44,16 +41,13 @@ class GameCreationViewModel @Inject constructor(
             initialValue = emptyList()
         )
 
-    /**
-     * Called when entering the GameCreateScreen to set the context for the lobby.
-     */
     fun loadBattle(battleId: Int) {
         if (_currentBattleId.value != battleId) {
             _currentBattleId.value = battleId
         }
     }
 
-    // --- SETTINGS LOGIC ---
+    // ---------------- SETTINGS ----------------
 
     private val _gameSettings = MutableStateFlow(GameConfig())
     val gameSettings = _gameSettings.asStateFlow()
@@ -62,67 +56,134 @@ class GameCreationViewModel @Inject constructor(
         _gameSettings.value = config
     }
 
-    fun updateGameType(type: String) {
-        _gameSettings.value = _gameSettings.value.copy(type = type)
-    }
+    // ---------------- CREATION ----------------
 
-    fun updateLegs(legs: Int) {
-        _gameSettings.value = _gameSettings.value.copy(legs = legs)
-    }
+    private val _isCreatingGame = MutableStateFlow(false)
+    val isCreatingGame = _isCreatingGame.asStateFlow()
 
-    // --- CREATION LOGIC ---
-
-    /**
-     * Creates a new game entry in the database and triggers navigation via onComplete.
-     */
     @SuppressLint("MissingPermission")
-    fun saveAndStartGame(battleId: Int, onComplete: (Int) -> Unit) {
-        val formatter = SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault())
-        val dateString = formatter.format(Date())
+    fun saveAndStartGame(
+        battleId: Int,
+        onComplete: (Int) -> Unit
+    ) {
+
+        if (_isCreatingGame.value) return
+
+        _isCreatingGame.value = true
 
         viewModelScope.launch {
-            // 1. Create the game record IMMEDIATELY with a placeholder location
-            val newGame = Game(
-                idBattle = battleId,
-                date = dateString,
-                location = "0.0,0.0", // Placeholder
-                duration = 0L,
-                type = _gameSettings.value.type
-            )
 
-            val newGameId = gameRepository.createNewGame(newGame)
-
-            // 2. Trigger Navigation immediately so the user can play
-            onComplete(newGameId)
-
-            // 3. Attempt to fetch location in the background and update the record
             try {
-                fusedLocationClient.getCurrentLocation(
-                    com.google.android.gms.location.Priority.PRIORITY_HIGH_ACCURACY,
-                    com.google.android.gms.tasks.CancellationTokenSource().token
-                ).addOnSuccessListener { location ->
-                    if (location != null) {
-                        val coords = "${location.latitude},${location.longitude}"
 
-                        // Update the existing record in the DB with actual coordinates
-                        viewModelScope.launch {
-                            gameRepository.updateGameLocation(newGameId.toInt(), coords)
-                        }
-                    }
+                val dateString = SimpleDateFormat(
+                    "dd.MM.yyyy HH:mm",
+                    Locale.getDefault()
+                ).format(Date())
+
+                var coords = ""
+
+                // GET LOCATION FIRST
+                if (_gameSettings.value.trackLocation) {
+
+                    coords = getDeviceLocation()
+
+                    Log.d("LOCATION", "coords = $coords")
                 }
-            } catch (e: SecurityException) {
-                // User denied permission; placeholder "0.0,0.0" stays
+
+                // CREATE GAME
+                val newGame = Game(
+                    idBattle = battleId,
+                    date = dateString,
+                    location = coords,
+                    duration = 0L,
+                    type = _gameSettings.value.type
+                )
+
+                val newGameId =
+                    gameRepository.createNewGame(newGame).toInt()
+
+                // NAVIGATE
+                onComplete(newGameId)
+
+            } catch (e: Exception) {
+
+                Log.e("LOCATION", "saveAndStartGame failed", e)
+
+            } finally {
+
+                _isCreatingGame.value = false
             }
         }
+    }
+
+    @SuppressLint("MissingPermission")
+    private suspend fun getDeviceLocation(): String {
+
+        try {
+
+            // 1. Try cached location first
+            val lastLocation =
+                fusedLocationClient.lastLocation.await()
+
+            if (lastLocation != null) {
+
+                Log.d(
+                    "LOCATION",
+                    "Using last location"
+                )
+
+                return "${lastLocation.latitude},${lastLocation.longitude}"
+            }
+
+            Log.d(
+                "LOCATION",
+                "Last location null, requesting current location"
+            )
+
+            // 2. Fallback to active location request
+            val currentLocation = withTimeoutOrNull(10000) {
+
+                fusedLocationClient.getCurrentLocation(
+                    Priority.PRIORITY_HIGH_ACCURACY,
+                    com.google.android.gms.tasks.CancellationTokenSource().token
+                ).await()
+            }
+
+            if (currentLocation != null) {
+
+                Log.d(
+                    "LOCATION",
+                    "Using current location"
+                )
+
+                return "${currentLocation.latitude},${currentLocation.longitude}"
+            }
+
+            Log.d(
+                "LOCATION",
+                "Current location is null"
+            )
+
+        } catch (e: Exception) {
+
+            Log.e(
+                "LOCATION",
+                "getDeviceLocation failed",
+                e
+            )
+        }
+
+        return ""
     }
 }
 
 /**
- * Represents the UI state for the GameSettingsScreen.
+ * Represents the configuration for a game session.
  */
 data class GameConfig(
     val type: String = "501",
     val legs: Int = 5,
+    val trackLocation: Boolean = true,
     val checkoutRule: String = "Double Out",
     val showSuggestions: Boolean = true,
     val showAnimations: Boolean = true

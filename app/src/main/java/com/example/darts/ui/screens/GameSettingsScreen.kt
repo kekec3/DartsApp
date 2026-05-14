@@ -1,5 +1,9 @@
 package com.example.darts.ui.screens
 
+import android.content.Context
+import android.content.Intent
+import android.location.LocationManager
+import android.provider.Settings
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -12,9 +16,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.darts.viewModel.GameCreationViewModel
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
@@ -38,6 +46,12 @@ fun GameSettingsScreen(
     val locationPermissionState = rememberPermissionState(
         android.Manifest.permission.ACCESS_FINE_LOCATION
     )
+    val context = LocalContext.current
+    val isCreating by viewModel.isCreatingGame.collectAsStateWithLifecycle()
+    val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+
+    // Check if GPS is enabled
+    fun isGpsEnabled() = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)
 
     Column(
         modifier = modifier
@@ -92,6 +106,28 @@ fun GameSettingsScreen(
                     ) { viewModel.updateSettings(config.copy(showSuggestions = it)) }
 
                     SettingsDivider()
+                    SettingsSwitchRow(
+                        label = "Track Match Location",
+                        checked = config.trackLocation
+                    ) { enabled ->
+
+                        if (enabled) {
+
+                            if (!locationPermissionState.status.isGranted) {
+                                locationPermissionState.launchPermissionRequest()
+                            } else {
+                                viewModel.updateSettings(
+                                    config.copy(trackLocation = true)
+                                )
+                            }
+
+                        } else {
+                            viewModel.updateSettings(
+                                config.copy(trackLocation = false)
+                            )
+                        }
+                    }
+                    SettingsDivider()
 
                     SettingsSwitchRow(
                         label = "Show Animations",
@@ -131,31 +167,52 @@ fun GameSettingsScreen(
                     // Implementation for reset logic
                 }
             )
-
+            val lifecycleOwner = LocalLifecycleOwner.current
+            DisposableEffect(lifecycleOwner) {
+                val observer = LifecycleEventObserver { _, event ->
+                    if (event == Lifecycle.Event.ON_RESUME) {
+                        // If they come back and GPS is finally on, just start.
+                        // Note: We don't auto-start here to avoid confusing the user,
+                        // but we let them click the button again which will now work.
+                    }
+                }
+                lifecycleOwner.lifecycle.addObserver(observer)
+                onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+            }
             Button(
+                enabled = !isCreating, // Disable button while loading
                 onClick = {
-                    // Check permissions logic
-                    if (locationPermissionState.status.isGranted) {
-                        // Case A: Permission already granted
-                        viewModel.saveAndStartGame(battleId) { id -> onStartMatch(id) }
-                    } else if (locationPermissionState.status.shouldShowRationale) {
-                        // Case B: User denied once but we can ask again, or they can skip
-                        // We proceed anyway to stay "low friction"
-                        viewModel.saveAndStartGame(battleId) { id -> onStartMatch(id) }
-                    } else {
-                        // Case C: First time asking
+                    if (!locationPermissionState.status.isGranted) {
+
+                        // Request permission first
                         locationPermissionState.launchPermissionRequest()
 
-                        // We immediately save/start. The ViewModel's try-catch
-                        // handles the "SecurityException" if they click 'Deny' on the popup.
-                        viewModel.saveAndStartGame(battleId) { id -> onStartMatch(id) }
+                    } else if (!isGpsEnabled()) {
+
+                        // Ask user to enable GPS
+                        context.startActivity(
+                            Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)
+                        )
+
+                    } else {
+
+                        // Permission + GPS OK
+                        viewModel.saveAndStartGame(battleId) { id ->
+                            onStartMatch(id)
+                        }
                     }
                 },
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF76B947)),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (isCreating) Color.Gray else Color(0xFF76B947)
+                ),
                 shape = RoundedCornerShape(8.dp),
                 modifier = Modifier.width(140.dp)
             ) {
-                Text("START", color = Color.Black, fontWeight = FontWeight.ExtraBold)
+                if (isCreating) {
+                    CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color.Black)
+                } else {
+                    Text("START", fontWeight = FontWeight.ExtraBold)
+                }
             }
         }
     }
