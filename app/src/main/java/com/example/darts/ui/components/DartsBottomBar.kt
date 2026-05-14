@@ -25,50 +25,80 @@ import com.example.darts.ui.navigation.StatsRoute
 
 @Composable
 fun DartsBottomBar(navController: NavHostController) {
-    // 1. Observe the current navigation state
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
-
-    // 2. Define your items and pair them with their actual Route classes
-    val items = listOf(
-        Triple("Home", Icons.Default.Home, HomeRoute),
-        Triple("Battles", Icons.Default.PlayArrow, BattlesRoute),
-        Triple("Players", Icons.Default.Person, PlayersRoute),
-        Triple("More", Icons.Default.Menu, StatsRoute)
-    )
 
     NavigationBar(
         containerColor = Color(0xFF121212),
         tonalElevation = 8.dp
     ) {
-        items.forEach { (label, icon, route) ->
-            // 3. Check if this item's route is currently active in the backstack
-            val isSelected = currentDestination?.hierarchy?.any { it.hasRoute(route::class) } == true
+        // --- HOME ITEM ---
+        NavigationBarItem(
+            selected = currentDestination?.hierarchy?.any { it.hasRoute<HomeRoute>() } == true,
+            onClick = {
+                navController.navigate(HomeRoute) {
+                    popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                    launchSingleTop = true
+                    restoreState = true
+                }
+            },
+            icon = { Icon(Icons.Default.Home, null, modifier = Modifier.size(26.dp)) },
+            label = { Text("Home", fontSize = 12.sp) },
+            colors = navigationItemColors()
+        )
 
-            NavigationBarItem(
-                selected = isSelected,
-                onClick = {
-                    // 4. Standard navigation logic for bottom bars
-                    navController.navigate(route) {
-                        // Pop up to the start destination to avoid stack buildup
-                        popUpTo(navController.graph.findStartDestination().id) {
-                            saveState = true
-                        }
-                        // Avoid multiple copies of the same screen
-                        launchSingleTop = true
-                        // Restore state (like scroll position) when re-selecting
-                        restoreState = true
-                    }
-                },
-                icon = { Icon(icon, contentDescription = null, modifier = Modifier.size(26.dp)) },
-                label = { Text(label, fontSize = 12.sp) },
-                colors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = Color.Green,
-                    selectedTextColor = Color.Green,
-                    unselectedIconColor = Color.Gray,
-                    indicatorColor = Color.Transparent
-                )
-            )
-        }
+        // --- BATTLES ITEM ---
+        NavigationBarItem(
+            selected = currentDestination?.hierarchy?.any { it.hasRoute<BattlesRoute>() } == true,
+            onClick = {
+                navController.navigate(BattlesRoute) {
+                    popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                    launchSingleTop = true
+                    restoreState = true
+                }
+            },
+            icon = { Icon(Icons.Default.PlayArrow, null, modifier = Modifier.size(26.dp)) },
+            label = { Text("Battles", fontSize = 12.sp) },
+            colors = navigationItemColors()
+        )
+
+        // --- PLAYERS ITEM ---
+        NavigationBarItem(
+            selected = currentDestination?.hierarchy?.any { it.hasRoute<PlayersRoute>() } == true,
+            onClick = {
+                // IMPORTANT: Create an instance of the data class here
+                navController.navigate(PlayersRoute(isSelection = false)) {
+                    popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                    launchSingleTop = true
+                    restoreState = true
+                }
+            },
+            icon = { Icon(Icons.Default.Person, null, modifier = Modifier.size(26.dp)) },
+            label = { Text("Players", fontSize = 12.sp) },
+            colors = navigationItemColors()
+        )
+
+        // --- MORE/STATS ITEM ---
+        NavigationBarItem(
+            selected = currentDestination?.hierarchy?.any { it.hasRoute<StatsRoute>() } == true,
+            onClick = {
+                navController.navigate(StatsRoute) {
+                    popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                    launchSingleTop = true
+                    restoreState = true
+                }
+            },
+            icon = { Icon(Icons.Default.Menu, null, modifier = Modifier.size(26.dp)) },
+            label = { Text("More", fontSize = 12.sp) },
+            colors = navigationItemColors()
+        )
     }
 }
+
+@Composable
+fun navigationItemColors() = NavigationBarItemDefaults.colors(
+    selectedIconColor = Color.Green,
+    selectedTextColor = Color.Green,
+    unselectedIconColor = Color.Gray,
+    indicatorColor = Color.Transparent
+)

@@ -1,6 +1,11 @@
 package com.example.darts.ui.screens
 
+import android.graphics.Bitmap
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.result.launch
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -9,19 +14,20 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import coil.compose.AsyncImage
 import com.example.darts.db.entities.Battle
 import com.example.darts.db.entities.Player
 import com.example.darts.viewModel.BattleViewModel
@@ -30,7 +36,9 @@ import com.example.darts.viewModel.BattleViewModel
 @Composable
 fun PlayersScreen(
     modifier: Modifier = Modifier,
+    isSelectionMode: Boolean = false,
     battleViewModel: BattleViewModel = hiltViewModel(),
+    onPlayerClick: (Int) -> Unit = {},
     onBattleCreated: (Int) -> Unit = {}
 ) {
     var searchQuery by remember { mutableStateOf("") }
@@ -53,7 +61,7 @@ fun PlayersScreen(
         )
     }
 
-    // 2. FINALIZE BATTLE DIALOG
+    // 2. BATTLE NAME DIALOG
     if (showBattleNameDialog) {
         AlertDialog(
             onDismissRequest = { showBattleNameDialog = false },
@@ -101,17 +109,14 @@ fun PlayersScreen(
         )
     }
 
-    // 3. DUPLICATE BATTLE RESOLUTION
+    // 3. DUPLICATE BATTLE DIALOG
     if (duplicateBattle != null) {
         AlertDialog(
             onDismissRequest = { duplicateBattle = null },
             containerColor = Color(0xFF1E1E1E),
             title = { Text("Battle Found", color = Color.White) },
             text = {
-                Text(
-                    "A battle named '${duplicateBattle?.name}' already exists with these players. Use existing or create new?",
-                    color = Color.LightGray
-                )
+                Text("A battle already exists with these players.", color = Color.LightGray)
             },
             confirmButton = {
                 Button(
@@ -136,44 +141,36 @@ fun PlayersScreen(
         )
     }
 
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .background(Color.Black)
-    ) {
+    Column(modifier = modifier.fillMaxSize().background(Color.Black)) {
         TopAppBar(
             title = {
                 Column {
                     Text("Players", fontWeight = FontWeight.Bold, color = Color.White)
-                    Text(
-                        text = if (selectedIds.size < 2) "Select 2-4" else "${selectedIds.size}/4 Selected",
-                        fontSize = 12.sp,
-                        color = if (selectedIds.size in 2..4) Color(0xFF76B947) else Color.Gray
-                    )
+                    if (isSelectionMode) {
+                        Text(
+                            text = if (selectedIds.size < 2) "Select 2-4" else "${selectedIds.size}/4 Selected",
+                            fontSize = 12.sp,
+                            color = if (selectedIds.size in 2..4) Color(0xFF76B947) else Color.Gray
+                        )
+                    }
                 }
             },
             actions = {
                 IconButton(onClick = { showAddPlayerDialog = true }) {
-                    Icon(Icons.Default.Add, contentDescription = null, tint = Color(0xFF76B947))
+                    Icon(Icons.Default.Add, null, tint = Color(0xFF76B947))
                 }
             },
             colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Black)
         )
 
         Box(modifier = Modifier.fillMaxSize()) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 16.dp)
-            ) {
+            Column(modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
                 OutlinedTextField(
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 8.dp),
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
                     placeholder = { Text("Search Players...") },
-                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = Color.Gray) },
+                    leadingIcon = { Icon(Icons.Default.Search, null, tint = Color.Gray) },
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = Color(0xFF76B947),
@@ -193,10 +190,15 @@ fun PlayersScreen(
                     ) { player ->
                         PlayerListItem(
                             player = player,
-                            isSelected = selectedIds.contains(player.idPlayer),
+                            // Highlight selection ONLY in selection mode
+                            isSelected = isSelectionMode && selectedIds.contains(player.idPlayer),
                             onSelect = {
-                                if (selectedIds.contains(player.idPlayer) || selectedIds.size < 4) {
+                                if (isSelectionMode) {
+                                    // BATTLE CREATION: Toggle player selection
                                     battleViewModel.togglePlayer(player.idPlayer)
+                                } else {
+                                    // VIEWING: Navigate to PlayerStatsScreen
+                                    onPlayerClick(player.idPlayer)
                                 }
                             }
                         )
@@ -204,16 +206,15 @@ fun PlayersScreen(
                 }
             }
 
-            if (selectedIds.size in 2..4) {
+            // Confirm FAB only shown when in selection mode with valid player count
+            if (isSelectionMode && selectedIds.size in 2..4) {
                 ExtendedFloatingActionButton(
                     onClick = { showBattleNameDialog = true },
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .padding(bottom = 32.dp),
+                    modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 32.dp),
                     containerColor = Color(0xFF76B947),
                     contentColor = Color.Black,
                     text = { Text("CONFIRM PLAYERS", fontWeight = FontWeight.ExtraBold) },
-                    icon = { Icon(Icons.Default.Check, contentDescription = null) }
+                    icon = { Icon(Icons.Default.Check, null) }
                 )
             }
         }
@@ -224,7 +225,22 @@ fun PlayersScreen(
 fun AddPlayerDialog(onDismiss: () -> Unit, onConfirm: (String, String) -> Unit) {
     var name by remember { mutableStateOf("") }
     var selectedAvatar by remember { mutableStateOf("🎯") }
+    var capturedBitmap by remember { mutableStateOf<Bitmap?>(null) }
     val presets = listOf("🎯", "🔥", "🎲", "👤", "⚡", "🏆")
+
+    val galleryLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        uri?.let {
+            selectedAvatar = it.toString()
+            capturedBitmap = null
+        }
+    }
+
+    val cameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicturePreview()) { bitmap ->
+        bitmap?.let {
+            capturedBitmap = it
+            selectedAvatar = ""
+        }
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -232,6 +248,55 @@ fun AddPlayerDialog(onDismiss: () -> Unit, onConfirm: (String, String) -> Unit) 
         title = { Text("New Player", color = Color.White) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(80.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFF2A2A2A)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (capturedBitmap != null) {
+                            Image(
+                                bitmap = capturedBitmap!!.asImageBitmap(),
+                                contentDescription = null,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        } else if (selectedAvatar.startsWith("content://") || selectedAvatar.startsWith("file://")) {
+                            AsyncImage(
+                                model = selectedAvatar,
+                                contentDescription = null,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        } else {
+                            Text(selectedAvatar, fontSize = 40.sp)
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.width(20.dp))
+
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        IconButton(
+                            onClick = { galleryLauncher.launch("image/*") },
+                            modifier = Modifier.background(Color(0xFF2A2A2A), CircleShape)
+                        ) {
+                            Icon(Icons.Default.PhotoLibrary, null, tint = Color(0xFF76B947))
+                        }
+                        IconButton(
+                            onClick = { cameraLauncher.launch() },
+                            modifier = Modifier.background(Color(0xFF2A2A2A), CircleShape)
+                        ) {
+                            Icon(Icons.Default.PhotoCamera, null, tint = Color(0xFF76B947))
+                        }
+                    }
+                }
+
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
@@ -242,7 +307,7 @@ fun AddPlayerDialog(onDismiss: () -> Unit, onConfirm: (String, String) -> Unit) 
                         unfocusedBorderColor = Color.Gray
                     )
                 )
-                Text("Select Avatar", color = Color.Gray, fontSize = 14.sp)
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
@@ -253,7 +318,10 @@ fun AddPlayerDialog(onDismiss: () -> Unit, onConfirm: (String, String) -> Unit) 
                                 .size(42.dp)
                                 .clip(CircleShape)
                                 .background(if (selectedAvatar == emoji) Color(0xFF76B947) else Color(0xFF2A2A2A))
-                                .clickable { selectedAvatar = emoji },
+                                .clickable {
+                                    selectedAvatar = emoji
+                                    capturedBitmap = null
+                                },
                             contentAlignment = Alignment.Center
                         ) { Text(emoji, fontSize = 20.sp) }
                     }
@@ -262,11 +330,13 @@ fun AddPlayerDialog(onDismiss: () -> Unit, onConfirm: (String, String) -> Unit) 
         },
         confirmButton = {
             Button(
-                onClick = { if (name.isNotBlank()) onConfirm(name, selectedAvatar) },
+                onClick = {
+                    if (name.isNotBlank()) {
+                        onConfirm(name, selectedAvatar)
+                    }
+                },
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF76B947))
-            ) {
-                Text("Add", color = Color.Black)
-            }
+            ) { Text("Add", color = Color.Black) }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) { Text("Cancel", color = Color.Gray) }
@@ -295,21 +365,26 @@ fun PlayerListItem(player: Player, isSelected: Boolean, onSelect: () -> Unit) {
                     .background(if (isSelected) Color(0xFF76B947).copy(alpha = 0.2f) else Color(0xFF2A2A2A)),
                 contentAlignment = Alignment.Center
             ) {
-                Text(
-                    player.avatar.ifEmpty { player.username.take(1).uppercase() },
-                    fontSize = 22.sp
-                )
+                if (player.avatar.startsWith("content://") || player.avatar.startsWith("file://")) {
+                    AsyncImage(
+                        model = player.avatar,
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop, // CROPPED TO FIT CIRCLE
+                        modifier = Modifier.fillMaxSize()
+                    )
+                } else {
+                    Text(
+                        player.avatar.ifEmpty { player.username.take(1).uppercase() },
+                        fontSize = 22.sp,
+                        color = Color.White
+                    )
+                }
             }
             Spacer(modifier = Modifier.width(16.dp))
-            Text(
-                player.username,
-                color = Color.White,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.SemiBold
-            )
+            Text(player.username, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
             Spacer(modifier = Modifier.weight(1f))
             if (isSelected) {
-                Icon(Icons.Default.Check, contentDescription = null, tint = Color(0xFF76B947))
+                Icon(Icons.Default.Check, null, tint = Color(0xFF76B947))
             }
         }
     }
