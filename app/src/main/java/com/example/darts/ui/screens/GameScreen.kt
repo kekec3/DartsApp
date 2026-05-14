@@ -47,7 +47,7 @@ fun GameScreen(
     viewModel: BaseGameViewModel,
     onNavigateBack: () -> Unit = {},
     onNavigateStats: () -> Unit = {},
-    battleId: Int
+    gameId: Int
 ) {
     val state  by viewModel.displayState.collectAsState()
     val method by viewModel.activeEntryMethod.collectAsState()

@@ -56,6 +56,8 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended:1.7.0")
     implementation("com.google.maps.android:maps-compose:6.12.0")
     implementation("androidx.hilt:hilt-lifecycle-viewmodel-compose:1.3.0")
+    implementation("com.google.android.gms:play-services-location:21.2.0")
+    implementation("com.google.accompanist:accompanist-permissions:0.34.0")
     implementation(libs.androidx.compose.foundation)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
