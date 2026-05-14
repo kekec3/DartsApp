@@ -1,5 +1,8 @@
 package com.example.darts.viewModel
 
+import android.os.Build
+import android.util.Log
+import androidx.annotation.RequiresApi
 import androidx.lifecycle.ViewModel
 import com.example.darts.db.entities.Player
 import com.example.darts.engine.DartThrow
@@ -68,8 +71,15 @@ class GameViewModelX01 @Inject constructor() : ViewModel(), BaseGameViewModel {
         refresh()
     }
 
+    @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
     override fun undoLastDart() {
         if (currentDarts.isNotEmpty()) currentDarts.removeLast()
+        else {
+            val (newState, lastTurn) = engine.undoTurn()
+            for (dart in lastTurn.darts.dropLast(1)) {
+                currentDarts.add(dart)
+            }
+        }
         refresh()
     }
 
