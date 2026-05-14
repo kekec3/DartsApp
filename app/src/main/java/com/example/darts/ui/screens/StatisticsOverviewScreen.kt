@@ -22,43 +22,39 @@ import androidx.compose.ui.unit.sp
 fun StatisticsOverviewScreen(
     modifier: Modifier = Modifier
 ) {
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Statistics", fontWeight = FontWeight.Bold) },
-                actions = {
-                    // Filter Dropdown Placeholder
-                    Surface(
-                        onClick = { },
-                        color = Color(0xFF1E1E1E),
-                        shape = RoundedCornerShape(8.dp)
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .background(Color.Black)
+    ) {
+        TopAppBar(
+            title = { Text("Statistics", fontWeight = FontWeight.Bold, color = Color.White) },
+            actions = {
+                Surface(
+                    onClick = { /* Open Time Filter */ },
+                    color = Color(0xFF1E1E1E),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text("All Time", fontSize = 12.sp, color = Color.White)
-                            Icon(Icons.Default.ArrowDropDown, contentDescription = null, tint = Color.White)
-                        }
+                        Text("All Time", fontSize = 12.sp, color = Color.White)
+                        Icon(Icons.Default.ArrowDropDown, contentDescription = null, tint = Color.White)
                     }
-                    Spacer(modifier = Modifier.width(16.dp))
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background
-                )
-            )
-        },
-        bottomBar = { DartsBottomBar() }
-    ) { innerPadding ->
+                }
+                Spacer(modifier = Modifier.width(16.dp))
+            },
+            colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Black)
+        )
+
         Column(
-            modifier = modifier
-                .padding(innerPadding)
+            modifier = Modifier
                 .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background)
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp)
         ) {
-            // KPI Grid (Matches Played, Won, Win Rate)
+            // High-level KPIs
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -70,55 +66,73 @@ fun StatisticsOverviewScreen(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Secondary Stats Row
+            // Performance Averages
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                StatKpiCard("3-Dart Average", "78.62", Modifier.weight(1f))
-                StatKpiCard("Highest Checkout", "121", Modifier.weight(1f))
+                StatKpiCard("3-Dart Avg", "78.62", Modifier.weight(1f))
+                StatKpiCard("Highest Out", "121", Modifier.weight(1f))
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(32.dp))
 
-            // Graph Section
+            // Trend Section
             Text(
-                "3-Dart Average Over Time",
-                style = MaterialTheme.typography.titleMedium,
+                "3-Dart Average Trend",
+                fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color.White
+                color = Color.White,
+                modifier = Modifier.padding(bottom = 16.dp)
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Placeholder for the Line Chart
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(220.dp),
+                    .height(200.dp),
                 shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E1E))
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1A))
             ) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
-                    // You would typically use a library like Vico or a custom Canvas here
-                    Text("Graph Visualization Area", color = Color.DarkGray)
+                    // Placeholder for actual Chart implementation (e.g., Vico or Canvas)
+                    Text(
+                        "Performance History Chart",
+                        color = Color.DarkGray,
+                        fontSize = 14.sp
+                    )
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
-            // X-Axis Labels Placeholder
+            // X-Axis
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                listOf("Apr", "May", "Jun").forEach { month ->
-                    Text(month, color = Color.Gray, fontSize = 12.sp)
+                listOf("Mar", "Apr", "May", "Jun").forEach { month ->
+                    Text(month, color = Color.Gray, fontSize = 11.sp)
                 }
             }
+
+            Spacer(modifier = Modifier.height(32.dp))
+
+            // Scoring Breakdown Header
+            Text(
+                "Scoring Distribution",
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.White,
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
+
+            // Horizontal Bars or List for 180s, 140s, 100s
+            ScoreBreakdownRow("180s", "14", 1.0f)
+            ScoreBreakdownRow("140+", "32", 0.7f)
+            ScoreBreakdownRow("100+", "78", 0.4f)
         }
     }
 }
@@ -133,25 +147,52 @@ fun StatKpiCard(
     Card(
         modifier = modifier,
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E1E))
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1A))
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = label,
-                fontSize = 10.sp,
+                text = label.uppercase(),
+                fontSize = 9.sp,
                 color = Color.Gray,
-                textAlign = TextAlign.Center,
-                lineHeight = 12.sp
+                fontWeight = FontWeight.ExtraBold,
+                textAlign = TextAlign.Center
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = value,
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
-                color = if (isHighlighted) Color.Green else Color.White
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Black,
+                color = if (isHighlighted) Color(0xFF76B947) else Color.White
+            )
+        }
+    }
+}
+
+@Composable
+fun ScoreBreakdownRow(label: String, count: String, percentage: Float) {
+    Column(modifier = Modifier.padding(bottom = 16.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(label, color = Color.LightGray, fontSize = 14.sp)
+            Text(count, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(4.dp)
+                .background(Color(0xFF1A1A1A), RoundedCornerShape(2.dp))
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(percentage)
+                    .fillMaxHeight()
+                    .background(Color(0xFF76B947), RoundedCornerShape(2.dp))
             )
         }
     }

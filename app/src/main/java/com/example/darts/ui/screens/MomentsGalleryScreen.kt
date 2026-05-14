@@ -13,7 +13,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -23,38 +22,41 @@ import androidx.compose.ui.unit.sp
 fun MomentsGalleryScreen(
     modifier: Modifier = Modifier
 ) {
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Moments", fontWeight = FontWeight.Bold) },
-                actions = {
-                    Surface(
-                        onClick = { },
-                        color = Color(0xFF1E1E1E),
-                        shape = RoundedCornerShape(8.dp)
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+    ) {
+        TopAppBar(
+            title = { Text("Moments", fontWeight = FontWeight.Bold, color = Color.White) },
+            actions = {
+                Surface(
+                    onClick = { /* Filter Logic */ },
+                    color = Color(0xFF1E1E1E),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text("All", fontSize = 12.sp, color = Color.White)
-                            Icon(Icons.Default.ArrowDropDown, contentDescription = null, tint = Color.White)
-                        }
+                        Text("All", fontSize = 12.sp, color = Color.White)
+                        Icon(Icons.Default.ArrowDropDown, contentDescription = null, tint = Color.White)
                     }
-                    Spacer(modifier = Modifier.width(16.dp))
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background
-                )
+                }
+                Spacer(modifier = Modifier.width(16.dp))
+            },
+            colors = TopAppBarDefaults.topAppBarColors(
+                containerColor = MaterialTheme.colorScheme.background
             )
-        },
-        bottomBar = { DartsBottomBar() }
-    ) { innerPadding ->
+        )
+
         val moments = listOf(
             MomentItem("T20 Checkout", "May 18, 2024"),
             MomentItem("180!", "May 15, 2024"),
             MomentItem("Bullseye", "May 10, 2024"),
-            MomentItem("140+", "May 8, 2024")
+            MomentItem("140+", "May 8, 2024"),
+            MomentItem("Triple 19", "May 5, 2024"),
+            MomentItem("Double Out", "May 2, 2024")
         )
 
         LazyVerticalGrid(
@@ -62,10 +64,7 @@ fun MomentsGalleryScreen(
             contentPadding = PaddingValues(16.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
-            modifier = modifier
-                .padding(innerPadding)
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background)
+            modifier = Modifier.fillMaxSize()
         ) {
             items(moments) { moment ->
                 MomentCard(moment)
@@ -79,24 +78,24 @@ fun MomentCard(moment: MomentItem) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .aspectRatio(0.8f), // Taller cards like the design
+            .aspectRatio(0.8f),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E1E))
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
-            // Placeholder for the image
+            // Placeholder for the capture/photo content
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.DarkGray) // Replace with Image() and ContentScale.Crop
+                    .background(Color(0xFF2A2A2A))
             )
 
-            // Text Overlay at the bottom
+            // Info Overlay
             Column(
                 modifier = Modifier
                     .align(Alignment.BottomStart)
                     .fillMaxWidth()
-                    .background(Color.Black.copy(alpha = 0.6f))
+                    .background(Color.Black.copy(alpha = 0.7f))
                     .padding(12.dp)
             ) {
                 Text(
@@ -107,7 +106,7 @@ fun MomentCard(moment: MomentItem) {
                 )
                 Text(
                     text = moment.date,
-                    color = Color.LightGray,
+                    color = Color.Gray,
                     fontSize = 11.sp
                 )
             }

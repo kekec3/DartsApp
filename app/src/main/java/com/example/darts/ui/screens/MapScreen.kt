@@ -22,7 +22,7 @@ import com.google.maps.android.compose.*
 fun MapScreen(
     modifier: Modifier = Modifier
 ) {
-    // ETF Belgrade Coordinates
+    // Coordinates for the School of Electrical Engineering (ETF)
     val etfBelgrade = LatLng(44.8061, 20.4761)
 
     val cameraPositionState = rememberCameraPositionState {
@@ -47,74 +47,65 @@ fun MapScreen(
         ]
     """.trimIndent()
 
-    Scaffold(
-        bottomBar = { DartsBottomBar() }
-    ) { innerPadding ->
-        Box(
-            modifier = modifier
-                .padding(innerPadding)
-                .fillMaxSize()
+    Box(modifier = modifier.fillMaxSize()) {
+        GoogleMap(
+            modifier = Modifier.fillMaxSize(),
+            cameraPositionState = cameraPositionState,
+            properties = MapProperties(
+                mapStyleOptions = MapStyleOptions(darkMapStyle)
+            ),
+            uiSettings = MapUiSettings(zoomControlsEnabled = false)
         ) {
-            GoogleMap(
-                modifier = Modifier.fillMaxSize(),
-                cameraPositionState = cameraPositionState,
-                properties = MapProperties(
-                    mapStyleOptions = MapStyleOptions(darkMapStyle)
-                ),
-                uiSettings = MapUiSettings(zoomControlsEnabled = false)
+            Marker(
+                state = rememberMarkerState(position = etfBelgrade),
+                title = "Match at ETF",
+                snippet = "John vs Mike"
+            )
+        }
+
+        // Top Search Bar (Floating)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            contentAlignment = Alignment.TopEnd
+        ) {
+            Surface(
+                onClick = { /* Open Search */ },
+                color = Color(0xFF1E1E1E),
+                shape = RoundedCornerShape(8.dp),
+                modifier = Modifier.size(48.dp)
             ) {
-                // You can add more Markers here easily!
-                Marker(
-                    state = rememberMarkerState(position = etfBelgrade),
-                    title = "Match at ETF",
-                    snippet = "John vs Mike"
+                Icon(
+                    imageVector = Icons.Default.Search,
+                    contentDescription = "Search",
+                    tint = Color.White,
+                    modifier = Modifier.padding(12.dp)
                 )
             }
+        }
 
-            // Top Search Bar (Floating)
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                contentAlignment = Alignment.TopEnd
+        // Match Info Card Overlay
+        Card(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(16.dp)
+                .fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = Color(0xFF1E1E1E).copy(alpha = 0.9f)
+            )
+        ) {
+            Row(
+                modifier = Modifier.padding(20.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Surface(
-                    onClick = { },
-                    color = Color(0xFF1E1E1E),
-                    shape = RoundedCornerShape(8.dp),
-                    modifier = Modifier.size(48.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Search,
-                        contentDescription = "Search",
-                        tint = Color.White,
-                        modifier = Modifier.padding(12.dp)
-                    )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("John vs Mike", fontWeight = FontWeight.Bold, color = Color.White)
+                    Text("May 20, 2024", color = Color.Gray, fontSize = 12.sp)
+                    Text("Bulevar kralja Aleksandra 73", color = Color(0xFF76B947), fontSize = 14.sp)
                 }
-            }
-
-            // Bottom UI Overlay (Matches Screen #12)
-            Card(
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(16.dp)
-                    .fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = Color(0xFF1E1E1E).copy(alpha = 0.9f)
-                )
-            ) {
-                Row(
-                    modifier = Modifier.padding(20.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text("John vs Mike", fontWeight = FontWeight.Bold, color = Color.White)
-                        Text("May 20, 2024", color = Color.Gray, fontSize = 12.sp)
-                        Text("ETF Belgrade", color = Color.Green, fontSize = 14.sp)
-                    }
-                    Text("3 - 1", fontSize = 28.sp, fontWeight = FontWeight.Black, color = Color.White)
-                }
+                Text("3 - 1", fontSize = 28.sp, fontWeight = FontWeight.Black, color = Color.White)
             }
         }
     }

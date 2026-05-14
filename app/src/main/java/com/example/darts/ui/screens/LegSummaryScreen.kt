@@ -18,23 +18,26 @@ import androidx.compose.ui.unit.sp
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LegSummaryScreen(
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    gameId: Int,
+    onBack: () -> Unit,
+    onContinue: () -> Unit = {}
 ) {
-    Scaffold(
-        topBar = {
-            CenterAlignedTopAppBar(
-                title = { Text("Leg Summary", fontWeight = FontWeight.Bold) },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background
-                )
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+    ) {
+        CenterAlignedTopAppBar(
+            title = { Text("Leg Summary", fontWeight = FontWeight.Bold) },
+            colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                containerColor = MaterialTheme.colorScheme.background
             )
-        }
-    ) { innerPadding ->
+        )
+
         Column(
-            modifier = modifier
-                .padding(innerPadding)
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background)
+            modifier = Modifier
+                .weight(1f)
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
@@ -76,12 +79,11 @@ fun LegSummaryScreen(
                 StatComparisonRow("180s", "1", "0")
             }
 
-            Spacer(modifier = Modifier.weight(1f))
             Spacer(modifier = Modifier.height(32.dp))
 
             // Continue Button
             Button(
-                onClick = { /* Navigate to next leg or home */ },
+                onClick = onContinue,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(60.dp),

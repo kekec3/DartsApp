@@ -30,16 +30,14 @@ import com.example.darts.viewModel.BattleViewModel
 @Composable
 fun PlayersScreen(
     modifier: Modifier = Modifier,
-    battleViewModel: BattleViewModel = hiltViewModel(), // Use hiltViewModel
-    onBattleCreated: () -> Unit = {}
+    battleViewModel: BattleViewModel = hiltViewModel(),
+    onBattleCreated: (Int) -> Unit = {}
 ) {
     var searchQuery by remember { mutableStateOf("") }
     var showAddPlayerDialog by remember { mutableStateOf(false) }
     var showBattleNameDialog by remember { mutableStateOf(false) }
-    var showDuplicateBattleDialog by remember { mutableStateOf(false) }
     var duplicateBattle by remember { mutableStateOf<Battle?>(null) }
 
-    // Use 'by' to automatically unwrap the state
     val players by battleViewModel.availablePlayers.collectAsState()
     val selectedIds by battleViewModel.selectedPlayerIds.collectAsState()
     val battleName by battleViewModel.battleName.collectAsState()
@@ -59,14 +57,20 @@ fun PlayersScreen(
     if (showBattleNameDialog) {
         AlertDialog(
             onDismissRequest = { showBattleNameDialog = false },
-            title = { Text("Start Battle", fontWeight = FontWeight.Bold) },
+            title = { Text("Start Battle", fontWeight = FontWeight.Bold, color = Color.White) },
+            containerColor = Color(0xFF1E1E1E),
             text = {
                 OutlinedTextField(
                     value = battleName,
                     onValueChange = { battleViewModel.onNameChange(it) },
                     label = { Text("Battle Name") },
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = Color(0xFF76B947),
+                        unfocusedBorderColor = Color.Gray,
+                        focusedLabelColor = Color(0xFF76B947)
+                    )
                 )
             },
             confirmButton = {
@@ -75,118 +79,142 @@ fun PlayersScreen(
                         battleViewModel.saveBattle(
                             onSuccess = { newId ->
                                 showBattleNameDialog = false
-                                onBattleCreated() // Or pass newId if your navigation needs it
+                                onBattleCreated(newId)
                             },
                             onDuplicateFound = { existing ->
                                 showBattleNameDialog = false
-                                duplicateBattle = existing // Trigger the "Duplicate" dialog
+                                duplicateBattle = existing
                             }
                         )
                     },
-                    enabled = battleName.isNotBlank()
+                    enabled = battleName.isNotBlank(),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF76B947))
                 ) {
-                    Text("Ready")
+                    Text("Ready", color = Color.Black, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showBattleNameDialog = false }) { Text("Cancel") }
+                TextButton(onClick = { showBattleNameDialog = false }) {
+                    Text("Cancel", color = Color.Gray)
+                }
             }
         )
     }
+
+    // 3. DUPLICATE BATTLE RESOLUTION
     if (duplicateBattle != null) {
         AlertDialog(
             onDismissRequest = { duplicateBattle = null },
-            title = { Text("Battle Found") },
+            containerColor = Color(0xFF1E1E1E),
+            title = { Text("Battle Found", color = Color.White) },
             text = {
-                Text("A battle named '${duplicateBattle?.name}' already exists with these players. Would you like to use that one or create a new one anyway?")
+                Text(
+                    "A battle named '${duplicateBattle?.name}' already exists with these players. Use existing or create new?",
+                    color = Color.LightGray
+                )
             },
             confirmButton = {
                 Button(
                     onClick = {
-                        // Option 1: Use Existing
                         val id = duplicateBattle?.idBattle
                         duplicateBattle = null
-                        showDuplicateBattleDialog = false
-                        onBattleCreated() // Navigate using existing battle logic
-                    }
-                ) { Text("Use Existing") }
+                        onBattleCreated(id!!)
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF76B947))
+                ) { Text("Use Existing", color = Color.Black) }
             },
             dismissButton = {
                 TextButton(
                     onClick = {
-                        battleViewModel.createNewBattle {  }
+                        battleViewModel.createNewBattle { idNew ->
+                            duplicateBattle = null
+                            onBattleCreated(idNew)
+                        }
                     }
-                ) { Text("Create New") }
+                ) { Text("Create New", color = Color(0xFF76B947)) }
             }
         )
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text("Players", fontWeight = FontWeight.Bold)
-                        Text(
-                            text = if (selectedIds.size < 2) "Select 2-4" else "${selectedIds.size}/4 Selected",
-                            fontSize = 12.sp,
-                            color = if (selectedIds.size in 2..4) Color.Green else Color.Gray
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .background(Color.Black)
+    ) {
+        TopAppBar(
+            title = {
+                Column {
+                    Text("Players", fontWeight = FontWeight.Bold, color = Color.White)
+                    Text(
+                        text = if (selectedIds.size < 2) "Select 2-4" else "${selectedIds.size}/4 Selected",
+                        fontSize = 12.sp,
+                        color = if (selectedIds.size in 2..4) Color(0xFF76B947) else Color.Gray
+                    )
+                }
+            },
+            actions = {
+                IconButton(onClick = { showAddPlayerDialog = true }) {
+                    Icon(Icons.Default.Add, contentDescription = null, tint = Color(0xFF76B947))
+                }
+            },
+            colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Black)
+        )
+
+        Box(modifier = Modifier.fillMaxSize()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp)
+            ) {
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp),
+                    placeholder = { Text("Search Players...") },
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = Color.Gray) },
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = Color(0xFF76B947),
+                        unfocusedBorderColor = Color.DarkGray,
+                        unfocusedContainerColor = Color(0xFF1A1A1A),
+                        focusedContainerColor = Color(0xFF1A1A1A)
+                    )
+                )
+
+                LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    contentPadding = PaddingValues(bottom = 100.dp)
+                ) {
+                    items(
+                        items = players.filter { it.username.contains(searchQuery, ignoreCase = true) },
+                        key = { it.idPlayer }
+                    ) { player ->
+                        PlayerListItem(
+                            player = player,
+                            isSelected = selectedIds.contains(player.idPlayer),
+                            onSelect = {
+                                if (selectedIds.contains(player.idPlayer) || selectedIds.size < 4) {
+                                    battleViewModel.togglePlayer(player.idPlayer)
+                                }
+                            }
                         )
                     }
-                },
-                actions = {
-                    IconButton(onClick = { showAddPlayerDialog = true }) {
-                        Icon(Icons.Default.Add, contentDescription = null, tint = Color.Green)
-                    }
                 }
-            )
-        },
-        floatingActionButton = {
+            }
+
             if (selectedIds.size in 2..4) {
                 ExtendedFloatingActionButton(
                     onClick = { showBattleNameDialog = true },
-                    containerColor = Color.Green,
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = 32.dp),
+                    containerColor = Color(0xFF76B947),
                     contentColor = Color.Black,
-                    text = { Text("Confirm Players") },
+                    text = { Text("CONFIRM PLAYERS", fontWeight = FontWeight.ExtraBold) },
                     icon = { Icon(Icons.Default.Check, contentDescription = null) }
                 )
-            }
-        }
-    ) { innerPadding ->
-        Column(
-            modifier = modifier
-                .padding(innerPadding)
-                .fillMaxSize()
-                .padding(horizontal = 16.dp)
-        ) {
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = { searchQuery = it },
-                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                placeholder = { Text("Search...") },
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-                shape = RoundedCornerShape(12.dp)
-            )
-
-            LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                contentPadding = PaddingValues(bottom = 80.dp)
-            ) {
-                // The filter happens on the 'players' State, so it updates automatically
-                items(
-                    items = players.filter { it.username.contains(searchQuery, ignoreCase = true) },
-                    key = { it.idPlayer } // Key is essential for the list to update correctly
-                ) { player ->
-                    PlayerListItem(
-                        player = player,
-                        isSelected = selectedIds.contains(player.idPlayer),
-                        onSelect = {
-                            if (selectedIds.contains(player.idPlayer) || selectedIds.size < 4) {
-                                battleViewModel.togglePlayer(player.idPlayer)
-                            }
-                        }
-                    )
-                }
             }
         }
     }
@@ -195,27 +223,36 @@ fun PlayersScreen(
 @Composable
 fun AddPlayerDialog(onDismiss: () -> Unit, onConfirm: (String, String) -> Unit) {
     var name by remember { mutableStateOf("") }
-    var selectedAvatar by remember { mutableStateOf("") }
-    val presets = listOf("🎯", "🔥", "🎲", "👤")
+    var selectedAvatar by remember { mutableStateOf("🎯") }
+    val presets = listOf("🎯", "🔥", "🎲", "👤", "⚡", "🏆")
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("New Player") },
+        containerColor = Color(0xFF1E1E1E),
+        title = { Text("New Player", color = Color.White) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text("Name") },
-                    modifier = Modifier.fillMaxWidth()
+                    label = { Text("Username") },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = Color(0xFF76B947),
+                        unfocusedBorderColor = Color.Gray
+                    )
                 )
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text("Select Avatar", color = Color.Gray, fontSize = 14.sp)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
                     presets.forEach { emoji ->
                         Box(
                             modifier = Modifier
-                                .size(45.dp)
+                                .size(42.dp)
                                 .clip(CircleShape)
-                                .background(if (selectedAvatar == emoji) Color.Green.copy(0.3f) else Color.DarkGray)
+                                .background(if (selectedAvatar == emoji) Color(0xFF76B947) else Color(0xFF2A2A2A))
                                 .clickable { selectedAvatar = emoji },
                             contentAlignment = Alignment.Center
                         ) { Text(emoji, fontSize = 20.sp) }
@@ -224,9 +261,15 @@ fun AddPlayerDialog(onDismiss: () -> Unit, onConfirm: (String, String) -> Unit) 
             }
         },
         confirmButton = {
-            Button(onClick = { if (name.isNotBlank()) onConfirm(name, selectedAvatar) }) {
-                Text("Add")
+            Button(
+                onClick = { if (name.isNotBlank()) onConfirm(name, selectedAvatar) },
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF76B947))
+            ) {
+                Text("Add", color = Color.Black)
             }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel", color = Color.Gray) }
         }
     )
 }
@@ -234,20 +277,40 @@ fun AddPlayerDialog(onDismiss: () -> Unit, onConfirm: (String, String) -> Unit) 
 @Composable
 fun PlayerListItem(player: Player, isSelected: Boolean, onSelect: () -> Unit) {
     Card(
-        modifier = Modifier.fillMaxWidth().clickable { onSelect() },
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onSelect() },
         shape = RoundedCornerShape(16.dp),
-        border = if (isSelected) BorderStroke(2.dp, Color.Green) else null,
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E1E))
+        border = if (isSelected) BorderStroke(2.dp, Color(0xFF76B947)) else null,
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1A))
     ) {
-        Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             Box(
-                modifier = Modifier.size(50.dp).clip(CircleShape).background(Color.DarkGray),
+                modifier = Modifier
+                    .size(50.dp)
+                    .clip(CircleShape)
+                    .background(if (isSelected) Color(0xFF76B947).copy(alpha = 0.2f) else Color(0xFF2A2A2A)),
                 contentAlignment = Alignment.Center
             ) {
-                Text(player.avatar.ifEmpty { player.username.take(1).uppercase() }, fontSize = 22.sp)
+                Text(
+                    player.avatar.ifEmpty { player.username.take(1).uppercase() },
+                    fontSize = 22.sp
+                )
             }
             Spacer(modifier = Modifier.width(16.dp))
-            Text(player.username, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+            Text(
+                player.username,
+                color = Color.White,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.SemiBold
+            )
+            Spacer(modifier = Modifier.weight(1f))
+            if (isSelected) {
+                Icon(Icons.Default.Check, contentDescription = null, tint = Color(0xFF76B947))
+            }
         }
     }
 }

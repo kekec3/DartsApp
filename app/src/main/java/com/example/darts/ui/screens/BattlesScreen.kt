@@ -3,6 +3,7 @@ package com.example.darts.ui.screens
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -21,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.example.darts.db.entities.Battle
+import com.example.darts.ui.components.DartsBottomBar
 import com.example.darts.viewModel.BattleViewModel
 import java.time.Instant
 import java.time.ZoneId
@@ -31,50 +33,53 @@ import java.time.format.DateTimeFormatter
 @Composable
 fun BattlesScreen(
     modifier: Modifier = Modifier,
-    battleViewModel: BattleViewModel = hiltViewModel()
+    battleViewModel: BattleViewModel = hiltViewModel(),
+    onBattleClick: (Int) -> Unit = {},
+    addBattle: () -> Unit = {}
 ) {
     val battles by battleViewModel.allBattles.collectAsState()
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        "Battles",
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                },
-                actions = {
-                    IconButton(onClick = { /* TODO */ }) {
-                        Icon(
-                            Icons.Default.Add,
-                            contentDescription = "Add Battle",
-                            tint = Color.Green,
-                            modifier = Modifier.size(32.dp) // Slightly larger icon
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background
+    // Use a Column instead of a Scaffold
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+    ) {
+        // 1. The Top Bar stays here because it's unique to Battles
+        TopAppBar(
+            title = {
+                Text(
+                    "Battles",
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold
                 )
+            },
+            actions = {
+                IconButton(onClick = { addBattle() }) {
+                    Icon(
+                        Icons.Default.Add,
+                        contentDescription = "Add Battle",
+                        tint = Color.Green,
+                        modifier = Modifier.size(32.dp)
+                    )
+                }
+            },
+            colors = TopAppBarDefaults.topAppBarColors(
+                containerColor = MaterialTheme.colorScheme.background
             )
-        },
-        bottomBar = {
-            DartsBottomBar()
-        }
-    ) { innerPadding ->
-        LazyColumn(
-            modifier = modifier
-                .padding(innerPadding)
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp) // More breathing room
-        ) {
+        )
 
+        // 2. The List content
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
             items(battles) { battle ->
-                BattleItem(battle)
+                // Adding a clickable modifier to your BattleItem
+                Box(modifier = Modifier.clickable { onBattleClick(battle.idBattle) }) {
+                    BattleItem(battle)
+                }
             }
         }
     }
@@ -111,36 +116,6 @@ fun BattleItem(battle: Battle) {
                     color = Color.Gray
                 )
             }
-        }
-    }
-}
-
-@Composable
-fun DartsBottomBar() {
-    NavigationBar(
-        containerColor = Color(0xFF121212),
-        tonalElevation = 8.dp
-    ) {
-        val items = listOf(
-            Triple("Home", Icons.Default.Home, false),
-            Triple("Battles", Icons.Default.PlayArrow, true), // PlayArrow as a proxy for battles
-            Triple("Players", Icons.Default.Person, false),
-            Triple("More", Icons.Default.Menu, false)
-        )
-
-        items.forEach { (label, icon, isSelected) ->
-            NavigationBarItem(
-                selected = isSelected,
-                onClick = { },
-                icon = { Icon(icon, contentDescription = null, modifier = Modifier.size(26.dp)) },
-                label = { Text(label, fontSize = 12.sp) },
-                colors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = Color.Green,
-                    selectedTextColor = Color.Green,
-                    unselectedIconColor = Color.Gray,
-                    indicatorColor = Color.Transparent
-                )
-            )
         }
     }
 }

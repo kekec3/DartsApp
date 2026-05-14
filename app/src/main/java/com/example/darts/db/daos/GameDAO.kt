@@ -17,5 +17,11 @@ interface GameDAO {
     fun getAllGamesByPlayer(player: Int) : Flow<List<Game>>?
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
-    suspend fun addGame(game: Game)
+    suspend fun addGame(game: Game): Long
+
+    @Query("SELECT * FROM games WHERE idBattle = :battleId")
+    fun getAllGamesByBattle(battleId: Int): Flow<List<Game>>
+
+    @Query("UPDATE games SET location = :coords WHERE idGame = :gameId")
+    suspend fun updateLocation(gameId: Int, coords: String)
 }

@@ -46,7 +46,8 @@ val DividerColor   = Color(0xFF2A2F2A)   // Divider from theme
 fun GameScreen(
     viewModel: BaseGameViewModel,
     onNavigateBack: () -> Unit = {},
-    onNavigateStats: () -> Unit = {}
+    onNavigateStats: () -> Unit = {},
+    gameId: Int
 ) {
     val state  by viewModel.displayState.collectAsState()
     val method by viewModel.activeEntryMethod.collectAsState()
