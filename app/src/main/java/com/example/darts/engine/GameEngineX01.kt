@@ -11,7 +11,7 @@ class GameEngineX01(
     val doubleOut: Boolean = false,
     val masterIn: Boolean = false,
     val maxLegs: Int = 3
-): GameEngine<PlayerStateX01> {
+): GameEngine<PlayerStateX01>() {
 
     private var state = GameState(
         playerStates = players,
@@ -22,7 +22,14 @@ class GameEngineX01(
         return state
     }
 
-    override fun submitTurn(turn: Turn): GameState<PlayerStateX01> {
+    override fun resetGame() {
+        state = GameState(
+            playerStates = state.playerStates.map { it.copy(score = target, legsWon = 0) },
+            maxLegs = maxLegs
+        )
+    }
+
+    override fun processTurn(turn: Turn): GameState<PlayerStateX01> {
         if (state.isFinished) return state
 
         val curr = state.currPlayer
