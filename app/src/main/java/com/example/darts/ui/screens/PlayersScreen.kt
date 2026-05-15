@@ -1,6 +1,11 @@
 package com.example.darts.ui.screens
 
+import android.Manifest
+import android.content.Context
+import android.content.pm.PackageManager
 import android.graphics.Bitmap
+import android.net.Uri
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.result.launch
@@ -23,14 +28,48 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.example.darts.db.entities.Battle
 import com.example.darts.db.entities.Player
 import com.example.darts.viewModel.BattleViewModel
+import java.io.File
+import java.io.FileOutputStream
+
+fun saveBitmapToInternalStorage(context: Context, bitmap: Bitmap, name: String): String {
+    val fileName = "avatar_${name.filter { it.isLetterOrDigit() }}_${System.currentTimeMillis()}.jpg"
+    val file = File(context.filesDir, fileName)
+    return try {
+        FileOutputStream(file).use { out ->
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 90, out)
+        }
+        file.absolutePath
+    } catch (e: Exception) {
+        e.printStackTrace()
+        ""
+    }
+}
+
+fun saveUriToInternalStorage(context: Context, uri: Uri, name: String): String {
+    val fileName = "avatar_gal_${name.filter { it.isLetterOrDigit() }}_${System.currentTimeMillis()}.jpg"
+    val file = File(context.filesDir, fileName)
+    return try {
+        context.contentResolver.openInputStream(uri)?.use { input ->
+            FileOutputStream(file).use { output ->
+                input.copyTo(output)
+            }
+        }
+        file.absolutePath
+    } catch (e: Exception) {
+        e.printStackTrace()
+        ""
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -50,7 +89,6 @@ fun PlayersScreen(
     val selectedIds by battleViewModel.selectedPlayerIds.collectAsState()
     val battleName by battleViewModel.battleName.collectAsState()
 
-    // 1. ADD PLAYER DIALOG
     if (showAddPlayerDialog) {
         AddPlayerDialog(
             onDismiss = { showAddPlayerDialog = false },
@@ -61,7 +99,6 @@ fun PlayersScreen(
         )
     }
 
-    // 2. BATTLE NAME DIALOG
     if (showBattleNameDialog) {
         AlertDialog(
             onDismissRequest = { showBattleNameDialog = false },
@@ -77,7 +114,8 @@ fun PlayersScreen(
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = Color(0xFF76B947),
                         unfocusedBorderColor = Color.Gray,
-                        focusedLabelColor = Color(0xFF76B947)
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White
                     )
                 )
             },
@@ -109,15 +147,12 @@ fun PlayersScreen(
         )
     }
 
-    // 3. DUPLICATE BATTLE DIALOG
     if (duplicateBattle != null) {
         AlertDialog(
             onDismissRequest = { duplicateBattle = null },
             containerColor = Color(0xFF1E1E1E),
             title = { Text("Battle Found", color = Color.White) },
-            text = {
-                Text("A battle already exists with these players.", color = Color.LightGray)
-            },
+            text = { Text("A battle already exists with these players.", color = Color.LightGray) },
             confirmButton = {
                 Button(
                     onClick = {
@@ -176,7 +211,9 @@ fun PlayersScreen(
                         focusedBorderColor = Color(0xFF76B947),
                         unfocusedBorderColor = Color.DarkGray,
                         unfocusedContainerColor = Color(0xFF1A1A1A),
-                        focusedContainerColor = Color(0xFF1A1A1A)
+                        focusedContainerColor = Color(0xFF1A1A1A),
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White
                     )
                 )
 
@@ -190,14 +227,11 @@ fun PlayersScreen(
                     ) { player ->
                         PlayerListItem(
                             player = player,
-                            // Highlight selection ONLY in selection mode
                             isSelected = isSelectionMode && selectedIds.contains(player.idPlayer),
                             onSelect = {
                                 if (isSelectionMode) {
-                                    // BATTLE CREATION: Toggle player selection
                                     battleViewModel.togglePlayer(player.idPlayer)
                                 } else {
-                                    // VIEWING: Navigate to PlayerStatsScreen
                                     onPlayerClick(player.idPlayer)
                                 }
                             }
@@ -206,7 +240,6 @@ fun PlayersScreen(
                 }
             }
 
-            // Confirm FAB only shown when in selection mode with valid player count
             if (isSelectionMode && selectedIds.size in 2..4) {
                 ExtendedFloatingActionButton(
                     onClick = { showBattleNameDialog = true },
@@ -223,23 +256,32 @@ fun PlayersScreen(
 
 @Composable
 fun AddPlayerDialog(onDismiss: () -> Unit, onConfirm: (String, String) -> Unit) {
+    val context = LocalContext.current
     var name by remember { mutableStateOf("") }
     var selectedAvatar by remember { mutableStateOf("🎯") }
     var capturedBitmap by remember { mutableStateOf<Bitmap?>(null) }
+    var galleryUri by remember { mutableStateOf<Uri?>(null) }
     val presets = listOf("🎯", "🔥", "🎲", "👤", "⚡", "🏆")
 
     val galleryLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         uri?.let {
+            galleryUri = it
             selectedAvatar = it.toString()
             capturedBitmap = null
         }
     }
 
     val cameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicturePreview()) { bitmap ->
-        bitmap?.let {
-            capturedBitmap = it
+        if (bitmap != null) {
+            capturedBitmap = bitmap
+            galleryUri = null
             selectedAvatar = ""
         }
+    }
+
+    val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
+        if (isGranted) cameraLauncher.launch()
+        else Toast.makeText(context, "Camera permission required", Toast.LENGTH_SHORT).show()
     }
 
     AlertDialog(
@@ -267,15 +309,16 @@ fun AddPlayerDialog(onDismiss: () -> Unit, onConfirm: (String, String) -> Unit) 
                                 contentScale = ContentScale.Crop,
                                 modifier = Modifier.fillMaxSize()
                             )
-                        } else if (selectedAvatar.startsWith("content://") || selectedAvatar.startsWith("file://")) {
+                        } else {
                             AsyncImage(
-                                model = selectedAvatar,
+                                model = if (selectedAvatar.startsWith("/")) File(selectedAvatar) else selectedAvatar,
                                 contentDescription = null,
                                 contentScale = ContentScale.Crop,
                                 modifier = Modifier.fillMaxSize()
                             )
-                        } else {
-                            Text(selectedAvatar, fontSize = 40.sp)
+                            if (!selectedAvatar.startsWith("content") && !selectedAvatar.startsWith("/") && selectedAvatar.isNotEmpty()) {
+                                Text(selectedAvatar, fontSize = 40.sp)
+                            }
                         }
                     }
 
@@ -289,7 +332,12 @@ fun AddPlayerDialog(onDismiss: () -> Unit, onConfirm: (String, String) -> Unit) 
                             Icon(Icons.Default.PhotoLibrary, null, tint = Color(0xFF76B947))
                         }
                         IconButton(
-                            onClick = { cameraLauncher.launch() },
+                            onClick = {
+                                when (PackageManager.PERMISSION_GRANTED) {
+                                    ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) -> cameraLauncher.launch()
+                                    else -> permissionLauncher.launch(Manifest.permission.CAMERA)
+                                }
+                            },
                             modifier = Modifier.background(Color(0xFF2A2A2A), CircleShape)
                         ) {
                             Icon(Icons.Default.PhotoCamera, null, tint = Color(0xFF76B947))
@@ -304,14 +352,13 @@ fun AddPlayerDialog(onDismiss: () -> Unit, onConfirm: (String, String) -> Unit) 
                     modifier = Modifier.fillMaxWidth(),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = Color(0xFF76B947),
-                        unfocusedBorderColor = Color.Gray
+                        unfocusedBorderColor = Color.Gray,
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White
                     )
                 )
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     presets.forEach { emoji ->
                         Box(
                             modifier = Modifier
@@ -321,6 +368,7 @@ fun AddPlayerDialog(onDismiss: () -> Unit, onConfirm: (String, String) -> Unit) 
                                 .clickable {
                                     selectedAvatar = emoji
                                     capturedBitmap = null
+                                    galleryUri = null
                                 },
                             contentAlignment = Alignment.Center
                         ) { Text(emoji, fontSize = 20.sp) }
@@ -332,7 +380,12 @@ fun AddPlayerDialog(onDismiss: () -> Unit, onConfirm: (String, String) -> Unit) 
             Button(
                 onClick = {
                     if (name.isNotBlank()) {
-                        onConfirm(name, selectedAvatar)
+                        val finalAvatar = when {
+                            capturedBitmap != null -> saveBitmapToInternalStorage(context, capturedBitmap!!, name)
+                            galleryUri != null -> saveUriToInternalStorage(context, galleryUri!!, name)
+                            else -> selectedAvatar
+                        }
+                        onConfirm(name, finalAvatar)
                     }
                 },
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF76B947))
@@ -347,9 +400,7 @@ fun AddPlayerDialog(onDismiss: () -> Unit, onConfirm: (String, String) -> Unit) 
 @Composable
 fun PlayerListItem(player: Player, isSelected: Boolean, onSelect: () -> Unit) {
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onSelect() },
+        modifier = Modifier.fillMaxWidth().clickable { onSelect() },
         shape = RoundedCornerShape(16.dp),
         border = if (isSelected) BorderStroke(2.dp, Color(0xFF76B947)) else null,
         colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1A))
@@ -362,19 +413,20 @@ fun PlayerListItem(player: Player, isSelected: Boolean, onSelect: () -> Unit) {
                 modifier = Modifier
                     .size(50.dp)
                     .clip(CircleShape)
-                    .background(if (isSelected) Color(0xFF76B947).copy(alpha = 0.2f) else Color(0xFF2A2A2A)),
+                    .background(Color(0xFF2A2A2A)),
                 contentAlignment = Alignment.Center
             ) {
-                if (player.avatar.startsWith("content://") || player.avatar.startsWith("file://")) {
+                val avatar = player.avatar
+                if (avatar.startsWith("/") || avatar.startsWith("content")) {
                     AsyncImage(
-                        model = player.avatar,
+                        model = if (avatar.startsWith("/")) File(avatar) else avatar,
                         contentDescription = null,
-                        contentScale = ContentScale.Crop, // CROPPED TO FIT CIRCLE
+                        contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxSize()
                     )
                 } else {
                     Text(
-                        player.avatar.ifEmpty { player.username.take(1).uppercase() },
+                        text = avatar.ifEmpty { player.username.take(1).uppercase() },
                         fontSize = 22.sp,
                         color = Color.White
                     )
