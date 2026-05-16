@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.sp
 @Composable
 fun PlayerStatsScreen(
     modifier: Modifier = Modifier,
+    playerId: Int,
     onBack: () -> Unit = {}
 ) {
     Column(
