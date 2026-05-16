@@ -4,12 +4,16 @@ import android.os.Build
 import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.example.darts.db.entities.Player
+import com.example.darts.db.repositories.BattleRepository
+import com.example.darts.db.repositories.GameRepository
 import com.example.darts.engine.DartThrow
 import com.example.darts.engine.GameEngineX01
 import com.example.darts.engine.Multiplier
 import com.example.darts.engine.Turn
 import com.example.darts.ui.screens.score_entry.EntryMethod
+import com.example.darts.utils.SoundManager
 import com.example.darts.viewModel.states.DartSlotState
 import com.example.darts.viewModel.states.GameDisplayState
 import com.example.darts.viewModel.states.PlayerDisplayState
@@ -20,15 +24,36 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
-class GameViewModelX01 @Inject constructor() : ViewModel(), BaseGameViewModel {
+class GameViewModelX01 @Inject constructor(
+    private val gameRepository: GameRepository,
+    private val battleRepository: BattleRepository,
+    private val soundManager: SoundManager
+) : ViewModel(), BaseGameViewModel {
 
     private lateinit var engine: GameEngineX01
 
-    fun startGame(players: List<PlayerStateX01>) {
-        engine = GameEngineX01(players)
+    fun startGame(players: List<PlayerStateX01>, target: Int = 501, doubleOut: Boolean = false, masterIn: Boolean = false, maxLegs: Int = 3) {
+        engine = GameEngineX01(players, target, doubleOut, masterIn, maxLegs)
+        refresh()
+
+        viewModelScope.launch {
+            kotlinx.coroutines.delay(200)
+            soundManager.playGameOn()
+        }
+    }
+
+    fun loadGame(gameId: Int, doubleOut: Boolean = false, masterIn: Boolean = false, maxLegs: Int = 3) {
+        viewModelScope.launch {
+            val game = gameRepository.getGameById(gameId) ?: return@launch
+            val players = battleRepository.getPlayersOfBattle(game.idBattle)
+            val playerStates = players.map { PlayerStateX01(player = it) }
+            val target = game.type.toIntOrNull() ?: 501
+            startGame(playerStates, target, doubleOut, masterIn, maxLegs)
+        }
     }
 
     private val currentDarts = mutableListOf<DartThrow>()
@@ -45,11 +70,6 @@ class GameViewModelX01 @Inject constructor() : ViewModel(), BaseGameViewModel {
         EntryMethod.Voice,
         EntryMethod.Camera
     )
-
-    init {
-        startGame(listOf(PlayerStateX01(Player(1, "Laki", "None")), PlayerStateX01(Player(2, "Praiz", "None"))))
-        refresh()
-    }
 
     override fun addDart(dart: DartThrow) {
         if (currentDarts.size >= 3 || _displayState.value.isFinished) return
@@ -85,11 +105,31 @@ class GameViewModelX01 @Inject constructor() : ViewModel(), BaseGameViewModel {
 
     override fun commitTurn() {
         if (currentDarts.isEmpty() || _displayState.value.isFinished) return
+
+        val turnScore = currentDarts.sumOf { it.score() }
+        val currentPlayerScore = engine.getState().playerStates[engine.getState().currPlayer].score
+        val remaining = currentPlayerScore - turnScore
+        val isBust = remaining < 0 || (remaining == 1 && engine.doubleOut)
+
         val padded = currentDarts.toMutableList()
         while (padded.size < 3) padded.add(DartThrow(0, Multiplier.SINGLE))
         engine.submitTurn(Turn(padded))
+
+        val isWin = engine.getState().isFinished
+
         currentDarts.clear()
         refresh()
+
+        when {
+            isWin -> soundManager.playGameShot()
+            isBust -> soundManager.playScore(0)
+            else   -> soundManager.playScore(turnScore)
+        }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        soundManager.release()
     }
 
     override fun setEntryMethod(method: EntryMethod) {

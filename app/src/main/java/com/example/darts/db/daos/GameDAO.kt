@@ -24,4 +24,7 @@ interface GameDAO {
 
     @Query("UPDATE games SET location = :coords WHERE idGame = :gameId")
     suspend fun updateLocation(gameId: Int, coords: String)
+
+    @Query("SELECT * FROM games WHERE idGame = :id")
+    suspend fun getGameById(id: Int): Game?
 }

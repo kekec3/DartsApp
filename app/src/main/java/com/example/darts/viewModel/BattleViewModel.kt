@@ -85,7 +85,6 @@ class BattleViewModel @Inject constructor(
             for (b in allBattlesList) {
                 // Use .first() to get the list out of the Flow immediately
                 val players = repository.getPlayersOfBattle(b.idBattle)
-                    .first()
                     .map { it.idPlayer }
                     .sorted()
 

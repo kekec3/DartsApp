@@ -36,7 +36,7 @@ fun GameSettingsScreen(
     battleId: Int,
     viewModel: GameCreationViewModel,
     onBack: () -> Unit,
-    onStartMatch: (Int) -> Unit,
+    onStartMatch: (Int, Boolean, Boolean, Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
     // Observe the current configuration from the ViewModel
@@ -198,7 +198,9 @@ fun GameSettingsScreen(
 
                         // Permission + GPS OK
                         viewModel.saveAndStartGame(battleId) { id ->
-                            onStartMatch(id)
+                            val doubleOut = config.checkoutRule.equals("Double Out", ignoreCase = true)
+                            val masterIn = config.checkoutRule.contains("In", ignoreCase = true)
+                            onStartMatch(id, doubleOut, masterIn, config.legs)
                         }
                     }
                 },

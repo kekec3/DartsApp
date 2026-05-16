@@ -139,7 +139,11 @@ fun GameScreen(
                                         viewModel.commitTurn()
                                     }
                                 )
-                                is EntryMethod.Voice  -> VoiceRecognitionScreen()
+                                is EntryMethod.Voice  -> VoiceRecognitionScreen(
+                                    onDartAdded = viewModel::addDart,
+                                    onUndo = viewModel::undoLastDart,
+                                    onSubmit = viewModel::commitTurn
+                                )
                                 is EntryMethod.Camera -> CameraScanScreen()
                             }
                         }

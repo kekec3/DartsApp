@@ -7,6 +7,7 @@ import com.example.darts.db.entities.Battle
 import com.example.darts.db.entities.Participate
 import com.example.darts.db.entities.Player
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 
 class BattleRepository @Inject constructor(
@@ -36,5 +37,5 @@ class BattleRepository @Inject constructor(
 
     fun getAllBattles(): Flow<List<Battle>> = battleDao.getAllBattles()
 
-    fun getPlayersOfBattle(id: Int) : Flow<List<Player>> = battleDao.getPlayersInBattle(id)
+    suspend fun getPlayersOfBattle(id: Int): List<Player> = battleDao.getPlayersInBattle(id).first()
 }

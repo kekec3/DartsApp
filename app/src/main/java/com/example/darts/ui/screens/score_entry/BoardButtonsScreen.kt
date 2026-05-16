@@ -52,7 +52,6 @@ fun BoardButtonsEntry(
     dartsEntered: Int,
     onDartAdded: (DartThrow) -> Unit,
     onUndo: () -> Unit,
-    onSwitchToCamera: (() -> Unit)? = null,   // kept in signature, no longer rendered
     modifier: Modifier = Modifier
 ) {
     var multiplier by remember { mutableStateOf(Multiplier.SINGLE) }

@@ -21,6 +21,8 @@ class GameRepository @Inject constructor(
         return gameDAO.addGame(game).toInt()
     }
 
+    suspend fun getGameById(id: Int): Game? = gameDAO.getGameById(id)
+
     fun getGamesForPlayer(playerId: Int): Flow<List<Game>>? {
         return gameDAO.getAllGamesByPlayer(playerId)
     }

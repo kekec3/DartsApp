@@ -3,6 +3,7 @@ package com.example.darts.ui.navigation
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -78,9 +79,9 @@ fun DartsNavGraph(
                 battleId = args.battleId,
                 viewModel = hiltViewModel(),
                 onBack = { navController.popBackStack() },
-                onStartMatch = { newGameId ->
+                onStartMatch = { newGameId, doubleOut, masterIn, maxLegs ->
                     // Navigate using the ID of the leg we just created
-                    navController.navigate(GameRoute(newGameId))
+                    navController.navigate(GameRoute(newGameId, doubleOut, masterIn, maxLegs))
                 }
             )
         }
@@ -89,6 +90,10 @@ fun DartsNavGraph(
         composable<GameRoute> { backStackEntry ->
             val args: GameRoute = backStackEntry.toRoute()
             val viewModel: GameViewModelX01 = hiltViewModel()
+
+            LaunchedEffect(args.gameId) {
+                viewModel.loadGame(args.gameId, args.doubleOut, args.masterIn, args.maxLegs)
+            }
 
             GameScreen(
                 viewModel = viewModel,
