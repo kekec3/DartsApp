@@ -108,22 +108,21 @@ class CommandParser {
      */
     private fun removePrefixes(text: String, threshold: Float = 0.7f): String {
         var result = text
+        val allPrefixes = (TRIPLE_PREFIXES + DOUBLE_PREFIXES + SINGLE_PREFIXES).sortedByDescending { it.length }
 
-        // Try longer prefixes first
-        val allPrefixes = (TRIPLE_PREFIXES + DOUBLE_PREFIXES + SINGLE_PREFIXES)
-            .sortedByDescending { it.length }
-
+        // 1. Try EXACT match first (very fast, highly accurate with the expanded lists)
         for (prefix in allPrefixes) {
             if (result.startsWith(prefix)) {
-                result = result.removePrefix(prefix).trim()
-                break
+                return result.removePrefix(prefix).trim()
             }
-            // Fuzzy prefix removal: if first N characters are ~80% similar, remove them
+        }
+
+        // 2. Fallback to Fuzzy matching
+        for (prefix in allPrefixes) {
             if (result.length >= prefix.length) {
                 val candidate = result.substring(0, prefix.length)
-                if (levenshteinSimilarity(candidate, prefix) >= 0.8f) {
-                    result = result.substring(prefix.length).trim()
-                    break
+                if (levenshteinSimilarity(candidate, prefix) >= 0.8f) { // Strict 0.8f threshold is good here
+                    return result.substring(prefix.length).trim()
                 }
             }
         }
@@ -173,31 +172,68 @@ class CommandParser {
     )
     private val SINGLE_BULL_WORDS = setOf("outer", "single bull", "twenty five", "twenty-five", "25")
     private val DOUBLE_BULL_WORDS = setOf("bull", "bullseye", "inner", "fifty", "bull's-eye", "50")
-    private val TRIPLE_PREFIXES = setOf("triple ", "treble ", "trip ", "t")
-    private val DOUBLE_PREFIXES = setOf("double ", "dub ", "d")
-    private val SINGLE_PREFIXES = setOf("single ", "s")
+    private val TRIPLE_PREFIXES = setOf(
+        "triple  ", "treble  ", "trip  ", "t  ", // Added space after 't'
+        "tripl  ", "tree-pull  ", "cripple  "
+    )
+    private val DOUBLE_PREFIXES = setOf(
+        "double  ", "dub  ", "d  ",  // Added space after 'd'
+        "dabl  ", "dabal  ", "bubble  ", "trouble  "
+    )
+    private val SINGLE_PREFIXES = setOf(
+        "single ", "s " // Added space after 's'
+    )
 
 
     private val WORD_TO_NUM = mapOf(
-        "one"       to 1,  "two"      to 2,  "three"    to 3,
-        "four"      to 4,  "five"     to 5,  "six"      to 6,
-        "seven"     to 7,  "eight"    to 8,  "nine"     to 9,
-        "ten"       to 10, "eleven"   to 11, "twelve"   to 12,
-        "thirteen"  to 13, "fourteen" to 14, "fifteen"  to 15,
-        "sixteen"   to 16, "seventeen" to 17,"eighteen" to 18,
-        "nineteen"  to 19, "twenty"   to 20,
-        // Common misspellings and accent variations
-        "won"       to 1,  "tu"       to 2,  "tee"      to 3,  "tree" to 3,
-        "fo"        to 4,  "fow"      to 4,  "five"     to 5,  "fiv" to 5,
-        "sev"       to 7,  "sen"      to 7,  "ate"      to 8,  "ait" to 8,
-        "nyne"      to 9,  "nine-t"   to 9,  "tin"      to 10, "tun" to 10,
-        "leven"     to 11, "twelv"    to 12, "turteen"  to 13, "fatteen" to 14,
-        "fteen"     to 15, "siteen"   to 16, "sevteen"  to 17, "eightteen" to 18,
-        "nintee"    to 19, "twunty"   to 20, "twinty"   to 20,
-        // Digit strings
+        // Standard English
+        "one" to 1, "two" to 2, "three" to 3, "four" to 4, "five" to 5,
+        "six" to 6, "seven" to 7, "eight" to 8, "nine" to 9, "ten" to 10,
+        "eleven" to 11, "twelve" to 12, "thirteen" to 13, "fourteen" to 14,
+        "fifteen" to 15, "sixteen" to 16, "seventeen" to 17, "eighteen" to 18,
+        "nineteen" to 19, "twenty" to 20,
+
+        // THE ACCENT DICTIONARY
+        // The "th" -> "t" / "d" / "f" shift
+        "tree" to 3, "free" to 3, "dree" to 3, "dirty" to 3, // engine sometimes hears 'thirty' for 'three'
+        "turtin" to 13, "tartin" to 13, "tirting" to 13, "thirting" to 13, "darting" to 13,
+
+        // The "w" -> "v" shift
+        "tventy" to 20, "twenty" to 20, "venti" to 20, "twinty" to 20,
+        "tvelve" to 12, "valve" to 12, "twelv" to 12, "delve" to 12, "dwell" to 12,
+
+        // Harsh/Rolled "R" and sharp vowels
+        "for" to 4, "foar" to 4, "fow" to 4,
+        "faiv" to 5, "fife" to 5, "five" to 5,
+        "siks" to 6, "seeks" to 6,
+        "najn" to 9, "nine-t" to 9,
+        "ejt" to 8, "ate" to 8, "ait" to 8,
+
+        // Digit strings (Keep these!)
         "1" to 1, "2" to 2, "3" to 3, "4" to 4, "5" to 5,
         "6" to 6, "7" to 7, "8" to 8, "9" to 9, "10" to 10,
         "11" to 11,"12" to 12,"13" to 13,"14" to 14,"15" to 15,
-        "16" to 16,"17" to 17,"18" to 18,"19" to 19,"20" to 20
+        "16" to 16,"17" to 17,"18" to 18,"19" to 19,"20" to 20,
+
+        // 1
+        "van" to 1, "von" to 1, "on" to 1, "juan" to 1, "one" to 1,
+        // 2
+        "to" to 2, "too" to 2, "tu" to 2, "do" to 2, "two" to 2,
+        // 3
+        "tree" to 3, "free" to 3, "dree" to 3, "three" to 3,
+        // 4
+        "for" to 4, "fo" to 4, "far" to 4, "four" to 4,
+        // 5
+        "fajv" to 5, "fiv" to 5, "wife" to 5, "vibe" to 5, "five" to 5,
+        // 6
+        "seeks" to 6, "siks" to 6, "sex" to 6, "sick" to 6, "six" to 6,
+        // 7
+        "sevn" to 7, "saven" to 7, "stephen" to 7, "seven" to 7,
+        // 8
+        "ejt" to 8, "ate" to 8, "it" to 8, "hate" to 8, "hey" to 8, "eight" to 8,
+        // 9
+        "najn" to 9, "nan" to 9, "nein" to 9, "mine" to 9, "line" to 9, "nine" to 9,
+        // 10
+        "tan" to 10, "then" to 10, "dan" to 10, "pen" to 10, "den" to 10, "ten" to 10,
     )
 }
