@@ -5,9 +5,12 @@ import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.darts.db.entities.Moment
+import com.example.darts.db.entities.MomentType
 import com.example.darts.db.entities.Player
 import com.example.darts.db.repositories.BattleRepository
 import com.example.darts.db.repositories.GameRepository
+import com.example.darts.db.repositories.MomentRepository
 import com.example.darts.engine.DartThrow
 import com.example.darts.engine.GameEngineX01
 import com.example.darts.engine.Multiplier
@@ -31,10 +34,12 @@ import javax.inject.Inject
 class GameViewModelX01 @Inject constructor(
     private val gameRepository: GameRepository,
     private val battleRepository: BattleRepository,
+    private val momentRepository: MomentRepository,
     private val soundManager: SoundManager
 ) : ViewModel(), BaseGameViewModel {
 
     private lateinit var engine: GameEngineX01
+    private var gameId: Int = -1
 
     fun startGame(players: List<PlayerStateX01>, target: Int = 501, doubleOut: Boolean = false, masterIn: Boolean = false, maxLegs: Int = 3) {
         engine = GameEngineX01(players, target, doubleOut, masterIn, maxLegs)
@@ -47,12 +52,24 @@ class GameViewModelX01 @Inject constructor(
     }
 
     fun loadGame(gameId: Int, doubleOut: Boolean = false, masterIn: Boolean = false, maxLegs: Int = 3) {
+        this.gameId = gameId
         viewModelScope.launch {
             val game = gameRepository.getGameById(gameId) ?: return@launch
             val players = battleRepository.getPlayersOfBattle(game.idBattle)
             val playerStates = players.map { PlayerStateX01(player = it) }
             val target = game.type.toIntOrNull() ?: 501
             startGame(playerStates, target, doubleOut, masterIn, maxLegs)
+        }
+    }
+
+    override fun captureGameMoment(type: MomentType, contentValue: String) {
+        viewModelScope.launch {
+            Log.d("MomentCapture", "Capturing $type with value: $contentValue for gameId: $gameId")
+            if (gameId != -1) {
+                momentRepository.saveMoment(Moment(idGame = gameId, type = type, contentValue = contentValue))
+            } else {
+                Log.e("MomentCapture", "GameId is -1! Could not save moment.")
+            }
         }
     }
 
