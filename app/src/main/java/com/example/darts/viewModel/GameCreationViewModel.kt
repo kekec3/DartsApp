@@ -24,16 +24,13 @@ class GameCreationViewModel @Inject constructor(
     private val fusedLocationClient: FusedLocationProviderClient
 ) : ViewModel() {
 
-    // ---------------- LOBBY LOGIC ----------------
-
     private val _currentBattleId = MutableStateFlow<Int?>(null)
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val games: StateFlow<List<Game>> = _currentBattleId
         .filterNotNull()
         .flatMapLatest { id ->
-            gameRepository.getGamesByBattle(id)
-                ?: flowOf(emptyList())
+            gameRepository.getGamesByBattle(id) ?: flowOf(emptyList())
         }
         .stateIn(
             scope = viewModelScope,
@@ -47,8 +44,6 @@ class GameCreationViewModel @Inject constructor(
         }
     }
 
-    // ---------------- SETTINGS ----------------
-
     private val _gameSettings = MutableStateFlow(GameConfig())
     val gameSettings = _gameSettings.asStateFlow()
 
@@ -56,25 +51,21 @@ class GameCreationViewModel @Inject constructor(
         _gameSettings.value = config
     }
 
-    // ---------------- CREATION ----------------
-
     private val _isCreatingGame = MutableStateFlow(false)
     val isCreatingGame = _isCreatingGame.asStateFlow()
 
     @SuppressLint("MissingPermission")
     fun saveAndStartGame(
         battleId: Int,
-        onComplete: (Int) -> Unit
+        onComplete: (Int) -> Unit,
+        onError: (String) -> Unit = {}
     ) {
-
         if (_isCreatingGame.value) return
 
         _isCreatingGame.value = true
 
         viewModelScope.launch {
-
             try {
-
                 val dateString = SimpleDateFormat(
                     "dd.MM.yyyy HH:mm",
                     Locale.getDefault()
@@ -82,15 +73,21 @@ class GameCreationViewModel @Inject constructor(
 
                 var coords = ""
 
-                // GET LOCATION FIRST
+                // Only perform strict location logic if tracking is enabled
                 if (_gameSettings.value.trackLocation) {
-
                     coords = getDeviceLocation()
 
-                    Log.d("LOCATION", "coords = $coords")
+                    if (coords.isEmpty() || coords == "0.0,0.0") {
+                        Log.e("LOCATION", "Tracking enabled but coordinates couldn't be fetched.")
+                        _isCreatingGame.value = false
+                        onError("Failed to acquire exact GPS coordinates. Please try again.")
+                        return@launch
+                    }
+                    Log.d("LOCATION", "Acquired coords: $coords")
+                } else {
+                    Log.d("LOCATION", "Tracking disabled. Creating game without location.")
                 }
 
-                // CREATE GAME
                 val newGame = Game(
                     idBattle = battleId,
                     date = dateString,
@@ -99,18 +96,13 @@ class GameCreationViewModel @Inject constructor(
                     type = _gameSettings.value.type
                 )
 
-                val newGameId =
-                    gameRepository.createNewGame(newGame).toInt()
-
-                // NAVIGATE
+                val newGameId = gameRepository.createNewGame(newGame).toInt()
                 onComplete(newGameId)
 
             } catch (e: Exception) {
-
                 Log.e("LOCATION", "saveAndStartGame failed", e)
-
+                onError(e.message ?: "An unexpected error occurred.")
             } finally {
-
                 _isCreatingGame.value = false
             }
         }
@@ -118,31 +110,9 @@ class GameCreationViewModel @Inject constructor(
 
     @SuppressLint("MissingPermission")
     private suspend fun getDeviceLocation(): String {
-
         try {
-
-            // 1. Try cached location first
-            val lastLocation =
-                fusedLocationClient.lastLocation.await()
-
-            if (lastLocation != null) {
-
-                Log.d(
-                    "LOCATION",
-                    "Using last location"
-                )
-
-                return "${lastLocation.latitude},${lastLocation.longitude}"
-            }
-
-            Log.d(
-                "LOCATION",
-                "Last location null, requesting current location"
-            )
-
-            // 2. Fallback to active location request
-            val currentLocation = withTimeoutOrNull(10000) {
-
+            Log.d("LOCATION", "Requesting high-accuracy fresh current location")
+            val currentLocation = withTimeoutOrNull(12000) {
                 fusedLocationClient.getCurrentLocation(
                     Priority.PRIORITY_HIGH_ACCURACY,
                     com.google.android.gms.tasks.CancellationTokenSource().token
@@ -150,36 +120,23 @@ class GameCreationViewModel @Inject constructor(
             }
 
             if (currentLocation != null) {
-
-                Log.d(
-                    "LOCATION",
-                    "Using current location"
-                )
-
                 return "${currentLocation.latitude},${currentLocation.longitude}"
             }
 
-            Log.d(
-                "LOCATION",
-                "Current location is null"
-            )
+            Log.d("LOCATION", "Fresh location timed out, fallback to last known location")
+            val lastLocation = fusedLocationClient.lastLocation.await()
+            if (lastLocation != null) {
+                return "${lastLocation.latitude},${lastLocation.longitude}"
+            }
 
         } catch (e: Exception) {
-
-            Log.e(
-                "LOCATION",
-                "getDeviceLocation failed",
-                e
-            )
+            Log.e("LOCATION", "getDeviceLocation execution failed", e)
         }
-
         return ""
     }
 }
 
-/**
- * Represents the configuration for a game session.
- */
+
 data class GameConfig(
     val type: String = "501",
     val legs: Int = 5,

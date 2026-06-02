@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.location.LocationManager
 import android.provider.Settings
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -24,11 +25,11 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.darts.viewModel.GameConfig
 import com.example.darts.viewModel.GameCreationViewModel
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
-import com.google.accompanist.permissions.shouldShowRationale
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class)
 @Composable
@@ -39,19 +40,30 @@ fun GameSettingsScreen(
     onStartMatch: (Int, Boolean, Boolean, Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    // Observe the current configuration from the ViewModel
     val config by viewModel.gameSettings.collectAsStateWithLifecycle()
+    val isCreating by viewModel.isCreatingGame.collectAsStateWithLifecycle()
 
-    // Location Permission State
+    val context = LocalContext.current
+    val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+
     val locationPermissionState = rememberPermissionState(
         android.Manifest.permission.ACCESS_FINE_LOCATION
     )
-    val context = LocalContext.current
-    val isCreating by viewModel.isCreatingGame.collectAsStateWithLifecycle()
-    val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
 
-    // Check if GPS is enabled
     fun isGpsEnabled() = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)
+    var gpsStatus by remember { mutableStateOf(isGpsEnabled()) }
+
+    // Sync GPS state on return from external settings app screen
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                gpsStatus = isGpsEnabled()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
 
     Column(
         modifier = modifier
@@ -106,27 +118,18 @@ fun GameSettingsScreen(
                     ) { viewModel.updateSettings(config.copy(showSuggestions = it)) }
 
                     SettingsDivider()
+
+                    // Toggle brought back, giving freedom over tracking choices
                     SettingsSwitchRow(
                         label = "Track Match Location",
                         checked = config.trackLocation
                     ) { enabled ->
-
-                        if (enabled) {
-
-                            if (!locationPermissionState.status.isGranted) {
-                                locationPermissionState.launchPermissionRequest()
-                            } else {
-                                viewModel.updateSettings(
-                                    config.copy(trackLocation = true)
-                                )
-                            }
-
-                        } else {
-                            viewModel.updateSettings(
-                                config.copy(trackLocation = false)
-                            )
+                        viewModel.updateSettings(config.copy(trackLocation = enabled))
+                        if (enabled && !locationPermissionState.status.isGranted) {
+                            locationPermissionState.launchPermissionRequest()
                         }
                     }
+
                     SettingsDivider()
 
                     SettingsSwitchRow(
@@ -138,10 +141,33 @@ fun GameSettingsScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Helpful hint about location
-            if (!locationPermissionState.status.isGranted) {
+            // Informative Contextual Text
+            if (config.trackLocation) {
+                if (!locationPermissionState.status.isGranted) {
+                    Text(
+                        text = "Permission required. Game creation will halt until granted.",
+                        color = Color(0xFFE53935),
+                        fontSize = 12.sp,
+                        modifier = Modifier.padding(horizontal = 8.dp)
+                    )
+                } else if (!gpsStatus) {
+                    Text(
+                        text = "GPS hardware is off. Game creation will route to system settings.",
+                        color = Color(0xFFE53935),
+                        fontSize = 12.sp,
+                        modifier = Modifier.padding(horizontal = 8.dp)
+                    )
+                } else {
+                    Text(
+                        text = "Location tracking ready and verified.",
+                        color = Color(0xFF76B947),
+                        fontSize = 12.sp,
+                        modifier = Modifier.padding(horizontal = 8.dp)
+                    )
+                }
+            } else {
                 Text(
-                    text = "Location is currently disabled. Games won't be pinned to the map.",
+                    text = "Location tracking turned off. Match map data bypassed.",
                     color = Color.Gray,
                     fontSize = 12.sp,
                     modifier = Modifier.padding(horizontal = 8.dp)
@@ -164,44 +190,26 @@ fun GameSettingsScreen(
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.clickable {
-                    // Implementation for reset logic
+                    viewModel.updateSettings(GameConfig())
                 }
             )
-            val lifecycleOwner = LocalLifecycleOwner.current
-            DisposableEffect(lifecycleOwner) {
-                val observer = LifecycleEventObserver { _, event ->
-                    if (event == Lifecycle.Event.ON_RESUME) {
-                        // If they come back and GPS is finally on, just start.
-                        // Note: We don't auto-start here to avoid confusing the user,
-                        // but we let them click the button again which will now work.
-                    }
-                }
-                lifecycleOwner.lifecycle.addObserver(observer)
-                onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
-            }
+
             Button(
-                enabled = !isCreating, // Disable button while loading
+                enabled = !isCreating,
                 onClick = {
-                    if (!locationPermissionState.status.isGranted) {
-
-                        // Request permission first
-                        locationPermissionState.launchPermissionRequest()
-
-                    } else if (!isGpsEnabled()) {
-
-                        // Ask user to enable GPS
-                        context.startActivity(
-                            Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)
-                        )
-
-                    } else {
-
-                        // Permission + GPS OK
-                        viewModel.saveAndStartGame(battleId) { id ->
-                            val doubleOut = config.checkoutRule.equals("Double Out", ignoreCase = true)
-                            val masterIn = config.checkoutRule.contains("In", ignoreCase = true)
-                            onStartMatch(id, doubleOut, masterIn, config.legs)
+                    // Main conditional router
+                    if (config.trackLocation) {
+                        if (!locationPermissionState.status.isGranted) {
+                            locationPermissionState.launchPermissionRequest()
+                        } else if (!isGpsEnabled()) {
+                            context.startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))
+                        } else {
+                            // Track location is ON, Permission and GPS are confirmed OK
+                            runGameCreation(battleId, config, viewModel, onStartMatch, context)
                         }
+                    } else {
+                        // Track location is OFF. Proceed right away seamlessly!
+                        runGameCreation(battleId, config, viewModel, onStartMatch, context)
                     }
                 },
                 colors = ButtonDefaults.buttonColors(
@@ -213,19 +221,35 @@ fun GameSettingsScreen(
                 if (isCreating) {
                     CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color.Black)
                 } else {
-                    Text("START", fontWeight = FontWeight.ExtraBold)
+                    Text("START", fontWeight = FontWeight.ExtraBold, color = Color.Black)
                 }
             }
         }
     }
 }
 
-@Composable
-fun SettingsRow(
-    label: String,
-    value: String,
-    onClick: () -> Unit = {}
+private fun runGameCreation(
+    battleId: Int,
+    config: GameConfig,
+    viewModel: GameCreationViewModel,
+    onStartMatch: (Int, Boolean, Boolean, Int) -> Unit,
+    context: Context
 ) {
+    viewModel.saveAndStartGame(
+        battleId = battleId,
+        onComplete = { id ->
+            val doubleOut = config.checkoutRule.equals("Double Out", ignoreCase = true)
+            val masterIn = config.checkoutRule.contains("In", ignoreCase = true)
+            onStartMatch(id, doubleOut, masterIn, config.legs)
+        },
+        onError = { errorMsg ->
+            Toast.makeText(context, errorMsg, Toast.LENGTH_LONG).show()
+        }
+    )
+}
+
+@Composable
+fun SettingsRow(label: String, value: String, onClick: () -> Unit = {}) {
     Row(
         modifier = Modifier
             .fillMaxWidth()

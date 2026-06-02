@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.darts.ui.screens.score_entry.ArrowIndicator
 import com.example.darts.ui.screens.score_entry.BoardButtonsEntry
+import com.example.darts.ui.screens.score_entry.CameraArRecommendationScreen
 import com.example.darts.ui.screens.score_entry.CameraScanScreen
 import com.example.darts.ui.screens.score_entry.EntryMethod
 import com.example.darts.ui.screens.score_entry.EntryMethodBar
@@ -144,7 +145,15 @@ fun GameScreen(
                                     onUndo = viewModel::undoLastDart,
                                     onSubmit = viewModel::commitTurn
                                 )
-                                is EntryMethod.Camera -> CameraScanScreen()
+                                is EntryMethod.Camera -> {
+                                    CameraArRecommendationScreen(
+                                        remainingScore = state.turn.remaining ?: 0,
+                                        onClose = {
+                                            // Safely switches back to standard manual buttons when they close out the AR view
+                                            viewModel.setEntryMethod(EntryMethod.BoardButtons)
+                                        }
+                                    )
+                                }
                             }
                         }
                     }
