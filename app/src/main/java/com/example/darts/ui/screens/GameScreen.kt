@@ -18,9 +18,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.darts.ui.screens.MomentScreen
 import com.example.darts.ui.screens.score_entry.ArrowIndicator
 import com.example.darts.ui.screens.score_entry.BoardButtonsEntry
-import com.example.darts.ui.screens.score_entry.CameraScanScreen
 import com.example.darts.ui.screens.score_entry.EntryMethod
 import com.example.darts.ui.screens.score_entry.EntryMethodBar
 import com.example.darts.ui.screens.score_entry.PlayerCardMinimal
@@ -144,7 +144,17 @@ fun GameScreen(
                                     onUndo = viewModel::undoLastDart,
                                     onSubmit = viewModel::commitTurn
                                 )
-                                is EntryMethod.Camera -> CameraScanScreen()
+                                is EntryMethod.Camera -> {
+                                    MomentScreen(
+                                        onMomentCaptured = { type, finalValue ->
+                                            viewModel.captureGameMoment(type, finalValue)
+                                            viewModel.setEntryMethod(EntryMethod.BoardButtons)
+                                        },
+                                        onClose = {
+                                            viewModel.setEntryMethod(EntryMethod.BoardButtons)
+                                        }
+                                    )
+                                }
                             }
                         }
                     }

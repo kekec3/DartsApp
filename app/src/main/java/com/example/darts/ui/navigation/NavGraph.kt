@@ -27,7 +27,7 @@ fun DartsNavGraph(
         composable<HomeRoute> {
             HomeScreen(
                 onViewBattles = { navController.navigate(BattlesRoute) },
-                // FIX: Navigate using an instance: PlayersRoute()
+                onViewMoments = {navController.navigate(MomentsGalleryRoute)},
                 onViewPlayers = { navController.navigate(PlayersRoute(isSelection = false)) },
                 onViewStats = { navController.navigate(StatsRoute) }
             )
@@ -125,6 +125,12 @@ fun DartsNavGraph(
             val args: MatchSummaryRoute = backStackEntry.toRoute()
             MatchSummaryScreen(
                 battleId = args.battleId,
+                onBack = { navController.popBackStack() }
+            )
+        }
+        composable<MomentsGalleryRoute> { backStackEntry ->
+            val args: MomentsGalleryRoute = backStackEntry.toRoute()
+            MomentsGalleryScreen(
                 onBack = { navController.popBackStack() }
             )
         }
