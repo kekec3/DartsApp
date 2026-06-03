@@ -7,6 +7,7 @@ import kotlinx.serialization.Serializable
 @Serializable object BattlesRoute
 @Serializable object SettingsRoute
 @Serializable object StatsRoute
+@Serializable object MomentsGalleryRoute
 
 @Serializable
 data class GameRoute(val gameId: Int, val doubleOut: Boolean = false, val masterIn: Boolean = false, val maxLegs: Int = 3)

@@ -11,8 +11,13 @@ import kotlinx.coroutines.flow.Flow
 interface MomentDAO {
 
     @Query("SELECT * FROM moments")
-    fun getAllMoments() : Flow<List<Moment>>?
+    fun getAllMoments() : Flow<List<Moment>>
 
-    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    @Query("SELECT * FROM moments WHERE idGame = :gameId")
+    fun getMomentsForGame(gameId: Int) : Flow<List<Moment>>
+
+    @Query("SELECT * FROM moments WHERE  moments.type = 'PHOTO'")
+    fun getPhotos(): Flow<List<Moment>>
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertMoment(moment: Moment)
 }

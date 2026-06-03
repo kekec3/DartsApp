@@ -18,10 +18,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.darts.ui.screens.MomentScreen
 import com.example.darts.ui.screens.score_entry.ArrowIndicator
 import com.example.darts.ui.screens.score_entry.BoardButtonsEntry
-import com.example.darts.ui.screens.score_entry.CameraArRecommendationScreen
-import com.example.darts.ui.screens.score_entry.CameraScanScreen
 import com.example.darts.ui.screens.score_entry.EntryMethod
 import com.example.darts.ui.screens.score_entry.EntryMethodBar
 import com.example.darts.ui.screens.score_entry.PlayerCardMinimal
@@ -146,10 +145,12 @@ fun GameScreen(
                                     onSubmit = viewModel::commitTurn
                                 )
                                 is EntryMethod.Camera -> {
-                                    CameraArRecommendationScreen(
-                                        remainingScore = state.turn.remaining ?: 0,
+                                    MomentScreen(
+                                        onMomentCaptured = { type, finalValue ->
+                                            viewModel.captureGameMoment(type, finalValue)
+                                            viewModel.setEntryMethod(EntryMethod.BoardButtons)
+                                        },
                                         onClose = {
-                                            // Safely switches back to standard manual buttons when they close out the AR view
                                             viewModel.setEntryMethod(EntryMethod.BoardButtons)
                                         }
                                     )
