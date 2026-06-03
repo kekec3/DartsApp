@@ -10,11 +10,11 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.KeyboardArrowLeft
-import androidx.compose.material.icons.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Place
-import androidx.compose.material.icons.filled.List
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -36,20 +36,20 @@ fun GameCreateScreen(
     onNewGame: () -> Unit,
     onLegSummary: (Int) -> Unit,
     onMatchSummary: (Int) -> Unit,
+    onMomentsTimeline: (Int) -> Unit,
     onBack: () -> Unit
 ) {
-    // 1. Initialize data loading
     LaunchedEffect(battleId) {
         viewModel.loadBattle(battleId)
     }
 
-    // 2. State Observation
     val games by viewModel.games.collectAsStateWithLifecycle()
     var isMapView by remember { mutableStateOf(false) }
 
-    Scaffold(
-        containerColor = Color.Black,
-        topBar = {
+    // Removed Scaffold, using Box for floating button overlay
+    Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
+
+        Column(modifier = Modifier.fillMaxSize()) {
             TopAppBar(
                 title = {
                     Text(
@@ -70,7 +70,6 @@ fun GameCreateScreen(
                     }
                 },
                 actions = {
-                    // TOGGLE BUTTON: Switch between List and Map
                     IconButton(onClick = { isMapView = !isMapView }) {
                         Icon(
                             imageVector = if (isMapView) Icons.Default.List else Icons.Default.Place,
@@ -81,78 +80,78 @@ fun GameCreateScreen(
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Black)
             )
-        },
-        floatingActionButton = {
-            LargeFloatingActionButton(
-                onClick = onNewGame,
-                containerColor = Color(0xFF76B947),
-                shape = RoundedCornerShape(16.dp),
-                contentColor = Color.Black
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = "New Game",
-                    modifier = Modifier.size(32.dp)
-                )
-            }
-        }
-    ) { innerPadding ->
 
-        AnimatedContent(
-            targetState = isMapView,
-            label = "ViewTransition",
-            modifier = Modifier.padding(innerPadding)
-        ) { targetIsMapView ->
-            if (targetIsMapView) {
-                // --- CALLING YOUR STANDALONE MAP SCREEN ---
-                MapScreen(games = games)
-            } else {
-                // --- LIST VIEW ---
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 20.dp)
-                ) {
-                    Spacer(modifier = Modifier.height(16.dp))
+            AnimatedContent(
+                targetState = isMapView,
+                label = "ViewTransition",
+                modifier = Modifier.fillMaxSize()
+            ) { targetIsMapView ->
+                if (targetIsMapView) {
+                    MapScreen(games = games)
+                } else {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 20.dp)
+                    ) {
+                        Spacer(modifier = Modifier.height(16.dp))
 
-                    MatchSummaryHeader(
-                        gameCount = games.size,
-                        onClick = { onMatchSummary(battleId) }
-                    )
+                        MatchSummaryHeader(
+                            gameCount = games.size,
+                            onClick = { onMatchSummary(battleId) }
+                        )
 
-                    Spacer(modifier = Modifier.height(24.dp))
+                        Spacer(modifier = Modifier.height(24.dp))
 
-                    Text(
-                        text = "GAMES HISTORY",
-                        color = Color(0xFF76B947),
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        letterSpacing = 1.2.sp
-                    )
+                        Text(
+                            text = "GAMES HISTORY",
+                            color = Color(0xFF76B947),
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            letterSpacing = 1.2.sp
+                        )
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                        Spacer(modifier = Modifier.height(12.dp))
 
-                    if (games.isEmpty()) {
-                        EmptyGamesPlaceholder()
-                    } else {
-                        LazyColumn(
-                            modifier = Modifier.fillMaxSize(),
-                            verticalArrangement = Arrangement.spacedBy(12.dp),
-                            contentPadding = PaddingValues(bottom = 80.dp)
-                        ) {
-                            items(
-                                items = games,
-                                key = { it.idGame }
-                            ) { game ->
-                                GameItem(
-                                    game = game,
-                                    onClick = { onLegSummary(game.idGame) }
-                                )
+                        if (games.isEmpty()) {
+                            EmptyGamesPlaceholder()
+                        } else {
+                            LazyColumn(
+                                modifier = Modifier.fillMaxSize(),
+                                verticalArrangement = Arrangement.spacedBy(12.dp),
+                                contentPadding = PaddingValues(bottom = 100.dp) // Added padding for FAB
+                            ) {
+                                items(
+                                    items = games,
+                                    key = { it.idGame }
+                                ) { game ->
+                                    GameItem(
+                                        game = game,
+                                        onClick = { onLegSummary(game.idGame) },
+                                        onMomentsTimelineClick = { onMomentsTimeline(game.idGame) }
+                                    )
+                                }
                             }
                         }
                     }
                 }
             }
+        }
+
+        LargeFloatingActionButton(
+            onClick = onNewGame,
+            containerColor = Color(0xFF76B947),
+            shape = RoundedCornerShape(16.dp),
+            contentColor = Color.Black,
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(24.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.Add,
+                contentDescription = "New Game",
+                modifier = Modifier.size(32.dp)
+            )
         }
     }
 }
@@ -192,7 +191,11 @@ fun MatchSummaryHeader(gameCount: Int, onClick: () -> Unit) {
 }
 
 @Composable
-fun GameItem(game: Game, onClick: () -> Unit) {
+fun GameItem(
+    game: Game, 
+    onClick: () -> Unit,
+    onMomentsTimelineClick: () -> Unit
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -221,7 +224,21 @@ fun GameItem(game: Game, onClick: () -> Unit) {
                 Text("${game.type} • ${game.date}", color = Color.Gray, fontSize = 13.sp)
             }
         }
-        Icon(Icons.Default.KeyboardArrowRight, null, tint = Color.DarkGray)
+        
+        // Dynamic Timeline Button
+        IconButton(
+            onClick = { onMomentsTimelineClick() },
+            modifier = Modifier
+                .size(40.dp)
+                .background(Color(0xFF252525), RoundedCornerShape(10.dp))
+        ) {
+            Icon(
+                imageVector = Icons.Default.CameraAlt,
+                contentDescription = "View Timeline",
+                tint = Color(0xFF76B947),
+                modifier = Modifier.size(20.dp)
+            )
+        }
     }
 }
 

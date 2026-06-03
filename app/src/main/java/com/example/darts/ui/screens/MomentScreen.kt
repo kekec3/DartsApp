@@ -4,6 +4,9 @@ import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
+import android.media.MediaRecorder
+import android.net.Uri
+import android.os.Build
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -37,6 +40,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
+import coil.compose.rememberAsyncImagePainter
 import com.example.darts.db.entities.MomentType
 import kotlinx.coroutines.delay
 import java.io.File
@@ -52,27 +57,12 @@ fun MomentScreen(
     var selectedTab by remember { mutableStateOf(MomentTab.PHOTO) }
 
     Column(
-        modifier = modifier
-            .fillMaxSize()
-            .background(Color(0xFF0B0F0C))
-            .padding(16.dp),
+        modifier = modifier.fillMaxSize().background(Color(0xFF0B0F0C)).padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "CAPTURE MATCH MOMENT",
-                color = Color.White,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Black,
-                letterSpacing = 1.sp
-            )
-            IconButton(onClick = onClose) {
-                Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.Gray)
-            }
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            Text("CAPTURE MATCH MOMENT", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
+            IconButton(onClick = onClose) { Icon(Icons.Default.Close, null, tint = Color.Gray) }
         }
 
         PrimaryTabRow(
@@ -87,11 +77,7 @@ fun MomentScreen(
         }
 
         Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-            AnimatedContent(
-                targetState = selectedTab,
-                transitionSpec = { fadeIn() togetherWith fadeOut() },
-                label = "moment_tabs"
-            ) { targetTab ->
+            AnimatedContent(targetState = selectedTab, transitionSpec = { fadeIn() togetherWith fadeOut() }) { targetTab ->
                 when (targetTab) {
                     MomentTab.PHOTO -> PhotoCaptureView(onPhotoSaved = { path -> onMomentCaptured(MomentType.PHOTO, path) })
                     MomentTab.AUDIO -> AudioRecorderView(onAudioSaved = { path -> onMomentCaptured(MomentType.AUDIO, path) })
@@ -198,50 +184,111 @@ fun PhotoCaptureView(onPhotoSaved: (String) -> Unit) {
 fun AudioRecorderView(onAudioSaved: (String) -> Unit) {
     val context = LocalContext.current
     var isRecording by remember { mutableStateOf(false) }
-    var recordTimeSeconds by remember { mutableIntStateOf(0) }
+    var seconds by remember { mutableIntStateOf(0) }
 
-    val permissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
-        if (isGranted) {
+    // Hold reference to the active hardware recorder instance and file
+    var recorderInstance by remember { mutableStateOf<MediaRecorder?>(null) }
+    var currentAudioFile by remember { mutableStateOf<File?>(null) }
+
+    // Logic to turn on hardware microphone and start writing data stream
+    val startRecording = {
+        try {
+            // Create a valid physical target file in your app sandbox
+            val file = File(context.filesDir, "audio_${System.currentTimeMillis()}.m4a")
+            currentAudioFile = file
+
+            // Safely initialize depending on current Android OS API level
+            val recorder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                MediaRecorder(context)
+            } else {
+                @Suppress("DEPRECATION") MediaRecorder()
+            }
+
+            recorder.apply {
+                setAudioSource(MediaRecorder.AudioSource.MIC)
+                setOutputFormat(MediaRecorder.OutputFormat.MPEG_4) // Standard wrapper container
+                setAudioEncoder(MediaRecorder.AudioEncoder.AAC)    // Clear digital audio compression format
+                setOutputFile(file.absolutePath)
+                prepare()
+                start() // Hardware capture begins here
+            }
+
+            recorderInstance = recorder
             isRecording = true
-        } else {
-            Toast.makeText(context, "Mic permission denied", Toast.LENGTH_SHORT).show()
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Toast.makeText(context, "Could not initialize hardware mic", Toast.LENGTH_SHORT).show()
         }
     }
 
+    // Logic to safely cut off the stream and lock down the recorded file
+    val stopRecording = { saveFile: Boolean ->
+        recorderInstance?.let { recorder ->
+            try {
+                recorder.stop()
+            } catch (e: Exception) {
+                // Catches edge-case fast double clicks before recorder fills initial sample buffers
+                e.printStackTrace()
+            } finally {
+                recorder.release()
+            }
+        }
+        recorderInstance = null
+        isRecording = false
+
+        if (saveFile && currentAudioFile != null) {
+            onAudioSaved(currentAudioFile!!.absolutePath)
+            Toast.makeText(context, "Audio Saved!", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    // Permission handle check callback
+    val micPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) startRecording() else Toast.makeText(context, "Mic permission denied", Toast.LENGTH_SHORT).show()
+    }
+
+    // Automatic Max 5s countdown timer loop driver
     LaunchedEffect(isRecording) {
         if (isRecording) {
-            recordTimeSeconds = 0
-            while (recordTimeSeconds < 5) {
+            seconds = 0
+            while (seconds < 5) {
                 delay(1000)
-                recordTimeSeconds++
+                seconds++
             }
-            isRecording = false
-            onAudioSaved("audio_recorded_${System.currentTimeMillis()}.mp3")
-            Toast.makeText(context, "Audio Saved!", Toast.LENGTH_SHORT).show()
+            // Auto stop when max countdown limit hits
+            stopRecording(true)
+        }
+    }
+
+    // Clean up hardware resources immediately if user backs out of the screen mid-record
+    DisposableEffect(Unit) {
+        onDispose {
+            recorderInstance?.let {
+                try { it.stop() } catch (_: Exception) {}
+                it.release()
+            }
         }
     }
 
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
-            text = if (isRecording) "RECORDING... $recordTimeSeconds / 5s" else "Tap to record (Max 5s)",
-            color = if (isRecording) Color.Red else Color.LightGray,
-            fontWeight = FontWeight.Bold,
-            fontSize = 14.sp
+            text = if (isRecording) "Recording... $seconds / 5s" else "Max 5s Recording",
+            color = if (isRecording) Color.Red else Color.White,
+            fontWeight = FontWeight.Bold
         )
         Spacer(modifier = Modifier.height(24.dp))
         FilledIconButton(
             onClick = {
                 if (!isRecording) {
-                    when (PackageManager.PERMISSION_GRANTED) {
-                        ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) -> {
-                            isRecording = true
-                        }
-                        else -> {
-                            permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
-                        }
+                    if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
+                        startRecording()
+                    } else {
+                        micPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
                     }
+                } else {
+                    stopRecording(true) // User manually clicked stop early
                 }
             },
             modifier = Modifier.size(80.dp),
@@ -261,26 +308,11 @@ fun AudioRecorderView(onAudioSaved: (String) -> Unit) {
 
 @Composable
 fun EmojiSelectorView(onEmojiSelected: (String) -> Unit) {
-    val emojisList = listOf("🎯", "🔥", "👑", "🥶", "😱", "🥳", "🤫", "😭", "🤷‍♂️", "🍻", "💩", "🦉")
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text("Select an expression:", color = Color.Gray, fontSize = 13.sp)
-        Spacer(modifier = Modifier.height(16.dp))
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(4),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-            modifier = Modifier.fillMaxWidth(0.85f)
-        ) {
-            items(emojisList) { itemEmoji ->
-                Box(
-                    modifier = Modifier
-                        .size(60.dp)
-                        .background(Color(0xFF1A1A1A), RoundedCornerShape(12.dp))
-                        .clickable { onEmojiSelected(itemEmoji) },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(text = itemEmoji, fontSize = 28.sp)
-                }
+    val emojis = listOf("🎯", "🔥", "👑", "🥶", "😱", "🥳", "🤫", "😭", "🤷‍♂️", "🍻", "💩", "🦉")
+    LazyVerticalGrid(GridCells.Fixed(4), modifier = Modifier.fillMaxWidth(0.85f)) {
+        items(emojis) { emoji ->
+            Box(modifier = Modifier.size(60.dp).clickable { onEmojiSelected(emoji) }, contentAlignment = Alignment.Center) {
+                Text(emoji, fontSize = 28.sp)
             }
         }
     }

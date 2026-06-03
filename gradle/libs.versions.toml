@@ -14,6 +14,7 @@ navigationCompose = "2.9.5"
 hilt = "2.57"
 lifecycleViewmodelCompose = "2.9.4"
 foundation = "1.11.0"
+uiGraphics = "1.11.2"
 
 
 [libraries]
@@ -41,6 +42,7 @@ hilt-compiler = { group = "com.google.dagger", name = "hilt-compiler", version.r
 androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigationCompose" }
 androidx-compose-material-icons-core = { group = "androidx.compose.material", name = "material-icons-core" }
 androidx-compose-foundation = { group = "androidx.compose.foundation", name = "foundation", version.ref = "foundation" }
+androidx-ui-graphics = { group = "androidx.compose.ui", name = "ui-graphics", version.ref = "uiGraphics" }
 
 
 [plugins]

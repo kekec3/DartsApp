@@ -14,7 +14,6 @@ class MomentRepository @Inject constructor(
 
     fun getMomentsForGame(gameId: Int): Flow<List<Moment>> = momentDAO.getMomentsForGame(gameId)
 
-    fun getPhotos(): Flow<List<Moment>> = momentDAO.getPhotos()
     suspend fun saveMoment(moment: Moment) {
         momentDAO.insertMoment(moment)
     }

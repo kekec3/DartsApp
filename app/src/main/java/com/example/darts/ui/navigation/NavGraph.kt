@@ -27,7 +27,7 @@ fun DartsNavGraph(
         composable<HomeRoute> {
             HomeScreen(
                 onViewBattles = { navController.navigate(BattlesRoute) },
-                onViewMoments = {navController.navigate(MomentsGalleryRoute)},
+                onViewMoments = { navController.navigate(MomentsGalleryRoute) },
                 onViewPlayers = { navController.navigate(PlayersRoute(isSelection = false)) },
                 onViewStats = { navController.navigate(StatsRoute) }
             )
@@ -40,7 +40,6 @@ fun DartsNavGraph(
                 onBattleClick = { id ->
                     navController.navigate(GameCreateScreenRoute(battleId = id))
                 },
-                // FIX: Navigate using an instance: PlayersRoute(...)
                 addBattle = { navController.navigate(PlayersRoute(isSelection = true)) }
             )
         }
@@ -52,7 +51,6 @@ fun DartsNavGraph(
                 isSelectionMode = args.isSelection,
                 battleViewModel = hiltViewModel(),
                 onPlayerClick = { id ->
-                    // FIX: Wrap the Int in the Route class instance
                     navController.navigate(PlayerStatsRoute(playerId = id))
                 },
                 onBattleCreated = { id ->
@@ -79,6 +77,7 @@ fun DartsNavGraph(
                 onNewGame = { navController.navigate(GameSettingsRoute(battleId = args.battleId)) },
                 onLegSummary = { gId -> navController.navigate(LegSummaryRoute(gameId = gId)) },
                 onMatchSummary = { bId -> navController.navigate(MatchSummaryRoute(battleId = bId)) },
+                onMomentsTimeline = { gId -> navController.navigate(GameTimelineRoute(gameId = gId)) },
                 onBack = { navController.popBackStack() }
             )
         }
@@ -91,13 +90,12 @@ fun DartsNavGraph(
                 viewModel = hiltViewModel(),
                 onBack = { navController.popBackStack() },
                 onStartMatch = { newGameId, doubleOut, masterIn, maxLegs ->
-                    // Navigate using the ID of the leg we just created
                     navController.navigate(GameRoute(newGameId, doubleOut, masterIn, maxLegs))
                 }
             )
         }
 
-        // 7. Scoring Screen (Kept exactly as you had it)
+        // 7. Scoring Screen
         composable<GameRoute> { backStackEntry ->
             val args: GameRoute = backStackEntry.toRoute()
             val viewModel: GameViewModelX01 = hiltViewModel()
@@ -128,9 +126,19 @@ fun DartsNavGraph(
                 onBack = { navController.popBackStack() }
             )
         }
-        composable<MomentsGalleryRoute> { backStackEntry ->
-            val args: MomentsGalleryRoute = backStackEntry.toRoute()
+
+        // 9. Moments Gallery
+        composable<MomentsGalleryRoute> {
             MomentsGalleryScreen(
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        // 10. Timeline Screen
+        composable<GameTimelineRoute> { backStackEntry ->
+            val args: GameTimelineRoute = backStackEntry.toRoute()
+            GameTimelineScreen(
+                gameId = args.gameId,
                 onBack = { navController.popBackStack() }
             )
         }
