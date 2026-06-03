@@ -67,6 +67,7 @@ dependencies {
     implementation("androidx.camera:camera-view:1.4.0")
     implementation("com.google.accompanist:accompanist-permissions:0.34.0")
     implementation(libs.androidx.compose.foundation)
+    implementation(libs.androidx.ui.graphics)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
