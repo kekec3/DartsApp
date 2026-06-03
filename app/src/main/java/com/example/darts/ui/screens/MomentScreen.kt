@@ -4,7 +4,9 @@ import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
+import android.media.MediaRecorder
 import android.net.Uri
+import android.os.Build
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -184,11 +186,70 @@ fun AudioRecorderView(onAudioSaved: (String) -> Unit) {
     var isRecording by remember { mutableStateOf(false) }
     var seconds by remember { mutableIntStateOf(0) }
 
-    // Permission launcher for Audio
-    val micPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
-        if (isGranted) isRecording = true else Toast.makeText(context, "Mic permission denied", Toast.LENGTH_SHORT).show()
+    // Hold reference to the active hardware recorder instance and file
+    var recorderInstance by remember { mutableStateOf<MediaRecorder?>(null) }
+    var currentAudioFile by remember { mutableStateOf<File?>(null) }
+
+    // Logic to turn on hardware microphone and start writing data stream
+    val startRecording = {
+        try {
+            // Create a valid physical target file in your app sandbox
+            val file = File(context.filesDir, "audio_${System.currentTimeMillis()}.m4a")
+            currentAudioFile = file
+
+            // Safely initialize depending on current Android OS API level
+            val recorder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                MediaRecorder(context)
+            } else {
+                @Suppress("DEPRECATION") MediaRecorder()
+            }
+
+            recorder.apply {
+                setAudioSource(MediaRecorder.AudioSource.MIC)
+                setOutputFormat(MediaRecorder.OutputFormat.MPEG_4) // Standard wrapper container
+                setAudioEncoder(MediaRecorder.AudioEncoder.AAC)    // Clear digital audio compression format
+                setOutputFile(file.absolutePath)
+                prepare()
+                start() // Hardware capture begins here
+            }
+
+            recorderInstance = recorder
+            isRecording = true
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Toast.makeText(context, "Could not initialize hardware mic", Toast.LENGTH_SHORT).show()
+        }
     }
 
+    // Logic to safely cut off the stream and lock down the recorded file
+    val stopRecording = { saveFile: Boolean ->
+        recorderInstance?.let { recorder ->
+            try {
+                recorder.stop()
+            } catch (e: Exception) {
+                // Catches edge-case fast double clicks before recorder fills initial sample buffers
+                e.printStackTrace()
+            } finally {
+                recorder.release()
+            }
+        }
+        recorderInstance = null
+        isRecording = false
+
+        if (saveFile && currentAudioFile != null) {
+            onAudioSaved(currentAudioFile!!.absolutePath)
+            Toast.makeText(context, "Audio Saved!", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    // Permission handle check callback
+    val micPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) startRecording() else Toast.makeText(context, "Mic permission denied", Toast.LENGTH_SHORT).show()
+    }
+
+    // Automatic Max 5s countdown timer loop driver
     LaunchedEffect(isRecording) {
         if (isRecording) {
             seconds = 0
@@ -196,24 +257,51 @@ fun AudioRecorderView(onAudioSaved: (String) -> Unit) {
                 delay(1000)
                 seconds++
             }
-            isRecording = false
-            onAudioSaved("audio_${System.currentTimeMillis()}.mp3")
-            Toast.makeText(context, "Audio Saved!", Toast.LENGTH_SHORT).show()
+            // Auto stop when max countdown limit hits
+            stopRecording(true)
+        }
+    }
+
+    // Clean up hardware resources immediately if user backs out of the screen mid-record
+    DisposableEffect(Unit) {
+        onDispose {
+            recorderInstance?.let {
+                try { it.stop() } catch (_: Exception) {}
+                it.release()
+            }
         }
     }
 
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(text = if (isRecording) "Recording... $seconds / 5s" else "Max 5s Recording", color = Color.White)
+        Text(
+            text = if (isRecording) "Recording... $seconds / 5s" else "Max 5s Recording",
+            color = if (isRecording) Color.Red else Color.White,
+            fontWeight = FontWeight.Bold
+        )
         Spacer(modifier = Modifier.height(24.dp))
         FilledIconButton(
             onClick = {
-                if (!isRecording) micPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
-                else isRecording = false
+                if (!isRecording) {
+                    if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
+                        startRecording()
+                    } else {
+                        micPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                    }
+                } else {
+                    stopRecording(true) // User manually clicked stop early
+                }
             },
             modifier = Modifier.size(80.dp),
-            colors = IconButtonDefaults.filledIconButtonColors(containerColor = if (isRecording) Color.Red else Color(0xFF1A1A1B))
+            colors = IconButtonDefaults.filledIconButtonColors(
+                containerColor = if (isRecording) Color.Red else Color(0xFF1A1A1B)
+            )
         ) {
-            Icon(if (isRecording) Icons.Default.Stop else Icons.Default.Mic, null, tint = Color.White, modifier = Modifier.size(36.dp))
+            Icon(
+                imageVector = if (isRecording) Icons.Default.Stop else Icons.Default.Mic,
+                contentDescription = null,
+                tint = Color.White,
+                modifier = Modifier.size(36.dp)
+            )
         }
     }
 }

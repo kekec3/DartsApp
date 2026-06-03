@@ -77,7 +77,26 @@ fun GameTimelineScreen(
 @Composable
 fun TimelineItem(moment: Moment) {
     val context = LocalContext.current
-    var isPlaying by remember { mutableStateOf(false) }
+
+    // Track the active native media player instance across recompositions
+    var activePlayer by remember { mutableStateOf<MediaPlayer?>(null) }
+    val isPlaying = activePlayer != null
+
+    // Intelligently resolve whether the string is an absolute path or a legacy filename
+    val physicalFile = remember(moment.contentValue) {
+        val path = moment.contentValue
+        if (path.startsWith("/")) File(path) else File(context.filesDir, path)
+    }
+
+    // Safely release hardware audio playback threads if user exits the screen mid-playback
+    DisposableEffect(moment.idMoment) {
+        onDispose {
+            activePlayer?.let { player ->
+                try { if (player.isPlaying) player.stop() } catch (_: Exception) {}
+                player.release()
+            }
+        }
+    }
 
     Row(modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -113,7 +132,7 @@ fun TimelineItem(moment: Moment) {
                 when(moment.type) {
                     MomentType.PHOTO -> {
                         AsyncImage(
-                            model = File(context.filesDir, moment.contentValue),
+                            model = physicalFile, // Fixed to use the resolved path safely
                             contentDescription = "Moment Photo",
                             modifier = Modifier.fillMaxWidth().height(150.dp).clip(RoundedCornerShape(8.dp)),
                             contentScale = ContentScale.Crop
@@ -123,34 +142,46 @@ fun TimelineItem(moment: Moment) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             IconButton(onClick = {
                                 if (isPlaying) {
-                                    isPlaying = false
+                                    // --- FIX: Stop and discard the active player instance ---
+                                    activePlayer?.let { player ->
+                                        try { if (player.isPlaying) player.stop() } catch (_: Exception) {}
+                                        player.release()
+                                    }
+                                    activePlayer = null
                                 } else {
-                                    val file = File(context.filesDir, moment.contentValue)
-                                    if (file.exists()) {
-                                        isPlaying = true
-                                        MediaPlayer().apply {
-                                            setAudioAttributes(
-                                                AudioAttributes.Builder()
-                                                    .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
-                                                    .setUsage(AudioAttributes.USAGE_MEDIA)
-                                                    .build()
-                                            )
-                                            setDataSource(file.absolutePath)
-                                            prepare()
-                                            start()
-                                            setOnCompletionListener {
-                                                it.release()
-                                                isPlaying = false
+                                    // --- FIX: Run safety validation checks on resolved path ---
+                                    if (physicalFile.exists()) {
+                                        try {
+                                            val newPlayer = MediaPlayer().apply {
+                                                setAudioAttributes(
+                                                    AudioAttributes.Builder()
+                                                        .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                                                        .setUsage(AudioAttributes.USAGE_MEDIA)
+                                                        .build()
+                                                )
+                                                setDataSource(physicalFile.absolutePath)
+                                                prepare()
+                                                start()
+
+                                                // Reset state cleanly when track finishes naturally
+                                                setOnCompletionListener { completedPlayer ->
+                                                    completedPlayer.release()
+                                                    activePlayer = null
+                                                }
                                             }
+                                            activePlayer = newPlayer
+                                        } catch (e: Exception) {
+                                            e.printStackTrace()
+                                            Toast.makeText(context, "Playback error occurred", Toast.LENGTH_SHORT).show()
                                         }
                                     } else {
-                                        Toast.makeText(context, "File not found: ${moment.contentValue}", Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(context, "Audio file missing from disk!", Toast.LENGTH_SHORT).show()
                                     }
                                 }
                             }) {
                                 Icon(
                                     imageVector = if (isPlaying) Icons.Default.Stop else Icons.Default.PlayArrow,
-                                    contentDescription = "Play",
+                                    contentDescription = if (isPlaying) "Stop" else "Play",
                                     tint = Color(0xFF76B947)
                                 )
                             }
