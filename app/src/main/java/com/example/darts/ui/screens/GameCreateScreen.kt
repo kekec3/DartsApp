@@ -10,6 +10,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.LocationOn
@@ -35,6 +36,7 @@ fun GameCreateScreen(
     onNewGame: () -> Unit,
     onLegSummary: (Int) -> Unit,
     onMatchSummary: (Int) -> Unit,
+    onMomentsTimeline: (Int) -> Unit,
     onBack: () -> Unit
 ) {
     LaunchedEffect(battleId) {
@@ -125,7 +127,8 @@ fun GameCreateScreen(
                                 ) { game ->
                                     GameItem(
                                         game = game,
-                                        onClick = { onLegSummary(game.idGame) }
+                                        onClick = { onLegSummary(game.idGame) },
+                                        onMomentsTimelineClick = { onMomentsTimeline(game.idGame) }
                                     )
                                 }
                             }
@@ -188,7 +191,11 @@ fun MatchSummaryHeader(gameCount: Int, onClick: () -> Unit) {
 }
 
 @Composable
-fun GameItem(game: Game, onClick: () -> Unit) {
+fun GameItem(
+    game: Game, 
+    onClick: () -> Unit,
+    onMomentsTimelineClick: () -> Unit
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -216,6 +223,21 @@ fun GameItem(game: Game, onClick: () -> Unit) {
                 }
                 Text("${game.type} • ${game.date}", color = Color.Gray, fontSize = 13.sp)
             }
+        }
+        
+        // Dynamic Timeline Button
+        IconButton(
+            onClick = { onMomentsTimelineClick() },
+            modifier = Modifier
+                .size(40.dp)
+                .background(Color(0xFF252525), RoundedCornerShape(10.dp))
+        ) {
+            Icon(
+                imageVector = Icons.Default.CameraAlt,
+                contentDescription = "View Timeline",
+                tint = Color(0xFF76B947),
+                modifier = Modifier.size(20.dp)
+            )
         }
     }
 }

@@ -19,6 +19,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.darts.ui.screens.MomentScreen
+import com.example.darts.ui.screens.score_entry.CameraArRecommendationScreen
 import com.example.darts.ui.screens.score_entry.ArrowIndicator
 import com.example.darts.ui.screens.score_entry.BoardButtonsEntry
 import com.example.darts.ui.screens.score_entry.EntryMethod
@@ -51,6 +52,7 @@ fun GameScreen(
 ) {
     val state  by viewModel.displayState.collectAsState()
     val method by viewModel.activeEntryMethod.collectAsState()
+    var showArOverlay by remember { mutableStateOf(false) }
 
     if (state.isFinished && state.winner != null) {
         WinnerScreen(winnerName = state.winner!!, onBack = onNavigateBack)
@@ -68,7 +70,8 @@ fun GameScreen(
             GameTopBar(
                 title   = state.gameTitle,
                 onBack  = onNavigateBack,
-                onStats = onNavigateStats
+                onStats = onNavigateStats,
+                onToggleAr = { showArOverlay = true }
             )
 
             // ── Player cards ──────────────────────────────────────────────────
@@ -169,13 +172,33 @@ fun GameScreen(
                 modifier       = Modifier.fillMaxWidth()
             )
         }
+
+        // --- AR RECOMMENDATION FULL-SCREEN OVERLAY ---
+        if (showArOverlay) {
+            val remainingScore = state.turn.remaining ?: 501
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black)
+            ) {
+                CameraArRecommendationScreen(
+                    remainingScore = remainingScore,
+                    onClose = { showArOverlay = false }
+                )
+            }
+        }
     }
 }
 
 // ── Top bar ───────────────────────────────────────────────────────────────────
 
 @Composable
-private fun GameTopBar(title: String, onBack: () -> Unit, onStats: () -> Unit) {
+private fun GameTopBar(
+    title: String, 
+    onBack: () -> Unit, 
+    onStats: () -> Unit,
+    onToggleAr: () -> Unit
+) {
     Row(
         modifier          = Modifier
             .fillMaxWidth()
@@ -193,6 +216,9 @@ private fun GameTopBar(title: String, onBack: () -> Unit, onStats: () -> Unit) {
             modifier   = Modifier.weight(1f),
             textAlign  = TextAlign.Center
         )
+        IconButton(onClick = onToggleAr) {
+            Icon(Icons.Default.Adjust, "AR Target Helper", tint = LimePrimary)
+        }
         IconButton(onClick = onStats) {
             Icon(Icons.Default.TrendingUp, "Stats", tint = HeaderWhite)
         }
