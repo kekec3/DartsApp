@@ -13,6 +13,7 @@ import androidx.compose.runtime.setValue
 import com.example.darts.engine.DartThrow
 import com.example.darts.engine.Multiplier
 import com.example.darts.utils.CommandParser
+import java.util.Locale
 
 private const val TAG = "VoiceInputManager"
 
@@ -72,9 +73,12 @@ class VoiceInputManager(
     private fun recognizerIntent() = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
         putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
 
-        // TIP: If you want to speak English, leave en-US or try en-GB.
-        // If you actually want to speak your native language, change this to your locale (e.g., "sr-RS" or "ru-RU")
-        putExtra(RecognizerIntent.EXTRA_LANGUAGE, "en-US")
+        // ⭐ Use default device locale as the standard. If offline packages aren't downloaded on certain phones, 
+        // asking for en-US can throw ERROR_LANGUAGE_NOT_SUPPORTED (13) or ERROR_NETWORK (2).
+        val defaultLocale = Locale.getDefault().toString()
+        putExtra(RecognizerIntent.EXTRA_LANGUAGE, defaultLocale)
+        putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, defaultLocale)
+        putExtra(RecognizerIntent.EXTRA_ONLY_RETURN_LANGUAGE_PREFERENCE, defaultLocale)
 
         putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 10)
 
