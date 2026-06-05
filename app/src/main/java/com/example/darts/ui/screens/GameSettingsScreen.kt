@@ -25,8 +25,8 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.darts.viewModel.GameConfig
 import com.example.darts.viewModel.GameCreationViewModel
+import com.example.darts.viewModel.GameSettings
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
@@ -37,7 +37,7 @@ fun GameSettingsScreen(
     battleId: Int,
     viewModel: GameCreationViewModel,
     onBack: () -> Unit,
-    onStartMatch: (Int, Boolean, Boolean, Int) -> Unit,
+    onStartMatch: (gameId: Int, settings: GameSettings) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val config by viewModel.gameSettings.collectAsStateWithLifecycle()
@@ -53,13 +53,23 @@ fun GameSettingsScreen(
     fun isGpsEnabled() = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)
     var gpsStatus by remember { mutableStateOf(isGpsEnabled()) }
 
-    // Sync GPS state on return from external settings app screen
+    val isX01 = config.type.equals("x01", ignoreCase = true)
+
+    // Dropdown visibility states
+    var expandedType by remember { mutableStateOf(false) }
+    var expandedScore by remember { mutableStateOf(false) }
+    var expandedLegs by remember { mutableStateOf(false) }
+
+    val menuModifier = Modifier.background(Color(0xFF2A2A2A))
+    val menuItemColors = MenuDefaults.itemColors(
+        textColor = Color.White,
+        leadingIconColor = Color.Gray
+    )
+
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) {
-                gpsStatus = isGpsEnabled()
-            }
+            if (event == Lifecycle.Event.ON_RESUME) gpsStatus = isGpsEnabled()
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
@@ -103,13 +113,126 @@ fun GameSettingsScreen(
                 shape = RoundedCornerShape(12.dp)
             ) {
                 Column {
-                    SettingsRow("Game Type", config.type) { /* TODO: Open Type Picker */ }
+                    // Game Type
+                    Box(modifier = Modifier.fillMaxWidth()) {
+                        SettingsRow("Game Type", config.type) { expandedType = true }
+                        DropdownMenu(
+                            expanded = expandedType,
+                            onDismissRequest = { expandedType = false },
+                            modifier = menuModifier
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("x01") },
+                                colors = menuItemColors,
+                                onClick = {
+                                    viewModel.updateSettings(
+                                        config.copy(
+                                            type = "x01",
+                                            startingScore = "501",
+                                            // reset cricket-only toggles when switching
+                                            cutThroat = false
+                                        )
+                                    )
+                                    expandedType = false
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Cricket") },
+                                colors = menuItemColors,
+                                onClick = {
+                                    viewModel.updateSettings(
+                                        config.copy(
+                                            type = "cricket",
+                                            startingScore = "N/A",
+                                            // reset x01-only toggles when switching
+                                            doubleOut = false,
+                                            masterIn = false
+                                        )
+                                    )
+                                    expandedType = false
+                                }
+                            )
+                        }
+                    }
+
                     SettingsDivider()
-                    SettingsRow("Starting Score", config.type) { /* Linked to Type */ }
+
+                    // Starting Score (x01 only)
+                    if (isX01) {
+                        Box(modifier = Modifier.fillMaxWidth()) {
+                            val scoreDisplay = if (isX01) config.startingScore else "N/A"
+                            SettingsRow("Starting Score", scoreDisplay) {
+                                if (isX01) expandedScore = true
+                            }
+                            if (isX01) {
+                                DropdownMenu(
+                                    expanded = expandedScore,
+                                    onDismissRequest = { expandedScore = false },
+                                    modifier = menuModifier
+                                ) {
+                                    listOf("301", "501", "701").forEach { score ->
+                                        DropdownMenuItem(
+                                            text = { Text(score) },
+                                            colors = menuItemColors,
+                                            onClick = {
+                                                viewModel.updateSettings(config.copy(startingScore = score))
+                                                expandedScore = false
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+
                     SettingsDivider()
-                    SettingsRow("Legs", config.legs.toString()) { /* TODO: Open Legs Picker */ }
+
+                    // Legs
+                    Box(modifier = Modifier.fillMaxWidth()) {
+                        SettingsRow(
+                            "Legs",
+                            "${config.legs} ${if (config.legs == 1) "Leg" else "Legs"}"
+                        ) { expandedLegs = true }
+                        DropdownMenu(
+                            expanded = expandedLegs,
+                            onDismissRequest = { expandedLegs = false },
+                            modifier = menuModifier
+                        ) {
+                            listOf(1, 3, 5, 7, 9).forEach { legCount ->
+                                DropdownMenuItem(
+                                    text = { Text("$legCount ${if (legCount == 1) "Leg" else "Legs"}") },
+                                    colors = menuItemColors,
+                                    onClick = {
+                                        viewModel.updateSettings(config.copy(legs = legCount))
+                                        expandedLegs = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+
                     SettingsDivider()
-                    SettingsRow("Checkout Rule", config.checkoutRule) { /* TODO: Open Rule Picker */ }
+
+                    // Game-mode-specific toggles
+                    if (isX01) {
+                        SettingsSwitchRow(
+                            label = "Double Out",
+                            checked = config.doubleOut
+                        ) { viewModel.updateSettings(config.copy(doubleOut = it)) }
+
+                        SettingsDivider()
+
+                        SettingsSwitchRow(
+                            label = "Master In",
+                            checked = config.masterIn
+                        ) { viewModel.updateSettings(config.copy(masterIn = it)) }
+                    } else {
+                        SettingsSwitchRow(
+                            label = "Cut-Throat",
+                            checked = config.cutThroat
+                        ) { viewModel.updateSettings(config.copy(cutThroat = it)) }
+                    }
+
                     SettingsDivider()
 
                     SettingsSwitchRow(
@@ -119,7 +242,6 @@ fun GameSettingsScreen(
 
                     SettingsDivider()
 
-                    // Toggle brought back, giving freedom over tracking choices
                     SettingsSwitchRow(
                         label = "Track Match Location",
                         checked = config.trackLocation
@@ -141,7 +263,6 @@ fun GameSettingsScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Informative Contextual Text
             if (config.trackLocation) {
                 if (!locationPermissionState.status.isGranted) {
                     Text(
@@ -189,26 +310,21 @@ fun GameSettingsScreen(
                 color = Color.White,
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Bold,
-                modifier = Modifier.clickable {
-                    viewModel.updateSettings(GameConfig())
-                }
+                modifier = Modifier.clickable { viewModel.updateSettings(GameSettings()) }
             )
 
             Button(
                 enabled = !isCreating,
                 onClick = {
-                    // Main conditional router
                     if (config.trackLocation) {
                         if (!locationPermissionState.status.isGranted) {
                             locationPermissionState.launchPermissionRequest()
                         } else if (!isGpsEnabled()) {
                             context.startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))
                         } else {
-                            // Track location is ON, Permission and GPS are confirmed OK
                             runGameCreation(battleId, config, viewModel, onStartMatch, context)
                         }
                     } else {
-                        // Track location is OFF. Proceed right away seamlessly!
                         runGameCreation(battleId, config, viewModel, onStartMatch, context)
                     }
                 },
@@ -230,21 +346,15 @@ fun GameSettingsScreen(
 
 private fun runGameCreation(
     battleId: Int,
-    config: GameConfig,
+    config: GameSettings,
     viewModel: GameCreationViewModel,
-    onStartMatch: (Int, Boolean, Boolean, Int) -> Unit,
+    onStartMatch: (Int, GameSettings) -> Unit,
     context: Context
 ) {
     viewModel.saveAndStartGame(
         battleId = battleId,
-        onComplete = { id ->
-            val doubleOut = config.checkoutRule.equals("Double Out", ignoreCase = true)
-            val masterIn = config.checkoutRule.contains("In", ignoreCase = true)
-            onStartMatch(id, doubleOut, masterIn, config.legs)
-        },
-        onError = { errorMsg ->
-            Toast.makeText(context, errorMsg, Toast.LENGTH_LONG).show()
-        }
+        onComplete = { gameId -> onStartMatch(gameId, config) },
+        onError = { errorMsg -> Toast.makeText(context, errorMsg, Toast.LENGTH_LONG).show() }
     )
 }
 
