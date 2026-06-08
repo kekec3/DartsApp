@@ -1,5 +1,6 @@
 package com.example.darts.ui.screens.score_entry
 
+import android.util.Log
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -57,6 +58,7 @@ fun BoardButtonsEntry(
     var multiplier by remember { mutableStateOf(Multiplier.SINGLE) }
 
     fun addAndReset(dart: DartThrow) {
+        Log.d("Cricket Mode", "Button Pressed")
         onDartAdded(dart)
         multiplier = Multiplier.SINGLE
     }
@@ -144,7 +146,7 @@ fun BoardButtonsEntry(
 // ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
-private fun DartProgressDots(dartsEntered: Int) {
+fun DartProgressDots(dartsEntered: Int) {
     Row(
         modifier              = Modifier
             .fillMaxWidth()
@@ -208,7 +210,7 @@ fun ArrowIndicator(
 // ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
-private fun MultiplierSelector(
+fun MultiplierSelector(
     selected: Multiplier,
     onSelect: (Multiplier) -> Unit,
     modifier: Modifier = Modifier
@@ -262,7 +264,7 @@ private fun MultiplierSelector(
 // ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
-private fun NumberButton(
+fun NumberButton(
     number: Int,
     multiplier: Multiplier,
     onClick: () -> Unit,
@@ -318,7 +320,7 @@ private fun NumberButton(
 // ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
-private fun SpecialDartButton(
+fun SpecialDartButton(
     label: String,
     sublabel: String,
     color: Color,
@@ -357,7 +359,7 @@ private fun SpecialDartButton(
 // ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
-private fun UndoButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
+fun UndoButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(10.dp))
@@ -557,6 +559,7 @@ private fun methodIcon(method: EntryMethod): ImageVector = when (method) {
     is EntryMethod.ScoreInput   -> Icons.Default.Keyboard
     is EntryMethod.Voice        -> Icons.Default.Mic
     is EntryMethod.Camera       -> Icons.Default.Videocam
+    is EntryMethod.Cricket     -> Icons.Default.SportsCricket
 }
 
 private val Multiplier.factor: Int

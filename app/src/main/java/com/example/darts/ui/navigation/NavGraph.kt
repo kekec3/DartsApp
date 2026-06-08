@@ -12,7 +12,11 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import com.example.darts.ui.GameScreen
 import com.example.darts.ui.screens.*
+import com.example.darts.viewModel.BaseGameViewModel
+import com.example.darts.viewModel.CricketConfig
+import com.example.darts.viewModel.GameViewModelCricket
 import com.example.darts.viewModel.GameViewModelX01
+import com.example.darts.viewModel.XO1Config
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
@@ -89,25 +93,61 @@ fun DartsNavGraph(
                 battleId = args.battleId,
                 viewModel = hiltViewModel(),
                 onBack = { navController.popBackStack() },
-                onStartMatch = { newGameId, doubleOut, masterIn, maxLegs ->
-                    navController.navigate(GameRoute(newGameId, doubleOut, masterIn, maxLegs))
+                onStartMatch = { gameId, settings ->
+                    when (settings.type.lowercase()) {
+                        "cricket" -> navController.navigate(
+                            CricketGameRoute(
+                                gameId = gameId,
+                                maxLegs = settings.legs,
+                                cutThroat = settings.cutThroat
+                            )
+                        )
+                        else -> navController.navigate(
+                            X01GameRoute(
+                                gameId = gameId,
+                                maxLegs = settings.legs,
+                                target = settings.startingScore.toIntOrNull() ?: 501,
+                                doubleOut = settings.doubleOut,
+                                masterIn = settings.masterIn
+                            )
+                        )
+                    }
                 }
             )
         }
 
-        // 7. Scoring Screen
-        composable<GameRoute> { backStackEntry ->
-            val args: GameRoute = backStackEntry.toRoute()
-            val viewModel: GameViewModelX01 = hiltViewModel()
-
-            LaunchedEffect(args.gameId) {
-                viewModel.loadGame(args.gameId, args.doubleOut, args.masterIn, args.maxLegs)
-            }
-
-            GameScreen(
-                viewModel = viewModel,
-                gameId = args.gameId
+        // 7a. X01 Scoring Screen
+        composable<X01GameRoute> { backStackEntry ->
+            val args: X01GameRoute = backStackEntry.toRoute()
+            val config = XO1Config(
+                target = args.target,
+                doubleOut = args.doubleOut,
+                masterIn = args.masterIn
             )
+            val viewModel: BaseGameViewModel = hiltViewModel<GameViewModelX01>()
+            LaunchedEffect(args.gameId) {
+                viewModel.loadGame(
+                    gameId = args.gameId,
+                    config = config,
+                    maxLegs = args.maxLegs
+                )
+            }
+            GameScreen(viewModel = viewModel, gameId = args.gameId)
+        }
+
+        // 7b. Cricket Scoring Screen
+        composable<CricketGameRoute> { backStackEntry ->
+            val args: CricketGameRoute = backStackEntry.toRoute()
+            val config = CricketConfig(cutthroat = args.cutThroat)
+            val viewModel: BaseGameViewModel = hiltViewModel<GameViewModelCricket>()
+            LaunchedEffect(args.gameId) {
+                viewModel.loadGame(
+                    gameId = args.gameId,
+                    config = config,
+                    maxLegs = args.maxLegs
+                )
+            }
+            GameScreen(viewModel = viewModel, gameId = args.gameId)
         }
 
         // 8. Summaries

@@ -1,5 +1,8 @@
 package com.example.darts.ui
 
+import android.os.Build
+import android.util.Log
+import androidx.annotation.RequiresApi
 import androidx.compose.animation.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
@@ -22,6 +25,7 @@ import com.example.darts.ui.screens.MomentScreen
 import com.example.darts.ui.screens.score_entry.CameraArRecommendationScreen
 import com.example.darts.ui.screens.score_entry.ArrowIndicator
 import com.example.darts.ui.screens.score_entry.BoardButtonsEntry
+import com.example.darts.ui.screens.score_entry.CricketEntry
 import com.example.darts.ui.screens.score_entry.EntryMethod
 import com.example.darts.ui.screens.score_entry.EntryMethodBar
 import com.example.darts.ui.screens.score_entry.PlayerCardMinimal
@@ -43,6 +47,7 @@ val HeaderWhite    = Color.White
 val MethodBarBg    = Color(0xFF121712)   // BlackSecondary from theme
 val DividerColor   = Color(0xFF2A2F2A)   // Divider from theme
 
+@RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
 @Composable
 fun GameScreen(
     viewModel: BaseGameViewModel,
@@ -157,6 +162,17 @@ fun GameScreen(
                                             viewModel.setEntryMethod(EntryMethod.BoardButtons)
                                         }
                                     )
+                                }
+                                is EntryMethod.Cricket -> {
+                                    if (viewModel is com.example.darts.viewModel.GameViewModelCricket) {
+                                        val cricketState by viewModel.cricketUiState.collectAsState()
+                                        CricketEntry(
+                                            cricketState = cricketState,
+                                            dartsEntered = state.turn.dartsEnteredCount,
+                                            onDartAdded  = viewModel::addDart,
+                                            onUndo       = viewModel::undoLastDart
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -452,4 +468,5 @@ private fun methodIcon(method: EntryMethod): ImageVector = when (method) {
     is EntryMethod.ScoreInput   -> Icons.Default.Keyboard
     is EntryMethod.Voice        -> Icons.Default.Mic
     is EntryMethod.Camera       -> Icons.Default.Videocam
+    is EntryMethod.Cricket      -> Icons.Default.SportsCricket
 }

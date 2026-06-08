@@ -11,4 +11,6 @@ sealed class EntryMethod(
     object Voice : EntryMethod("Voice", "mic")
 
     object Camera : EntryMethod("Camera", "videocam")
+
+    object  Cricket : EntryMethod("Cricket", "sports_cricket")
 }

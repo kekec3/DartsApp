@@ -50,14 +50,21 @@ class GameViewModelX01 @Inject constructor(
         }
     }
 
-    fun loadGame(gameId: Int, doubleOut: Boolean = false, masterIn: Boolean = false, maxLegs: Int = 3) {
+    override fun loadGame(gameId: Int, maxLegs: Int, config: GameConfig) {
+        val cfg = config as XO1Config
         this.gameId = gameId
+
         viewModelScope.launch {
             val game = gameRepository.getGameById(gameId) ?: return@launch
             val players = battleRepository.getPlayersOfBattle(game.idBattle)
-            val playerStates = players.map { PlayerStateX01(player = it) }
-            val target = game.type.toIntOrNull() ?: 501
-            startGame(playerStates, target, doubleOut, masterIn, maxLegs)
+            val playerStates = players.map { PlayerStateX01(it) }
+            startGame(
+                players = playerStates,
+                target = cfg.target,
+                doubleOut = cfg.doubleOut,
+                masterIn = cfg.masterIn,
+                maxLegs = maxLegs
+            )
         }
     }
 

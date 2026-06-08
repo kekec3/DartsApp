@@ -18,5 +18,6 @@ data class PlayerStateCricket(
         25 to CricketNumber()
     ),
     val score: Int = 0,
-    val legsVon: Int = 0,
+    val legsWon: Int = 0,
+    val dartsThrown: Int = 0
 ) : PlayerState

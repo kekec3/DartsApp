@@ -173,12 +173,12 @@ class CommandParser {
     private val SINGLE_BULL_WORDS = setOf("outer", "single bull", "twenty five", "twenty-five", "25")
     private val DOUBLE_BULL_WORDS = setOf("bull", "bullseye", "inner", "fifty", "bull's-eye", "50")
     private val TRIPLE_PREFIXES = setOf(
-        "triple  ", "treble  ", "trip  ", "t  ", // Added space after 't'
-        "tripl  ", "tree-pull  ", "cripple  "
+        "triple ", "treble ", "trip ", "t ",
+        "tripl ", "tree-pull ", "cripple "
     )
     private val DOUBLE_PREFIXES = setOf(
-        "double  ", "dub  ", "d  ",  // Added space after 'd'
-        "dabl  ", "dabal  ", "bubble  ", "trouble  "
+        "double ", "dub ", "d ",
+        "dabl ", "dabal ", "bubble ", "trouble "
     )
     private val SINGLE_PREFIXES = setOf(
         "single ", "s " // Added space after 's'

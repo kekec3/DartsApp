@@ -9,8 +9,23 @@ import kotlinx.serialization.Serializable
 @Serializable object StatsRoute
 @Serializable object MomentsGalleryRoute
 
+sealed interface GameRoute
+
 @Serializable
-data class GameRoute(val gameId: Int, val doubleOut: Boolean = false, val masterIn: Boolean = false, val maxLegs: Int = 3)
+data class X01GameRoute(
+    val gameId: Int,
+    val maxLegs: Int,
+    val target: Int = 501,
+    val doubleOut: Boolean = false,
+    val masterIn: Boolean = false
+) : GameRoute
+
+@Serializable
+data class CricketGameRoute(
+    val gameId: Int,
+    val maxLegs: Int,
+    val cutThroat: Boolean = false
+) : GameRoute
 
 @Serializable data class GameSettingsRoute(val battleId: Int)
 @Serializable data class GameCreateScreenRoute(val battleId: Int)

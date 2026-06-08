@@ -44,11 +44,11 @@ class GameCreationViewModel @Inject constructor(
         }
     }
 
-    private val _gameSettings = MutableStateFlow(GameConfig())
+    private val _gameSettings = MutableStateFlow(GameSettings())
     val gameSettings = _gameSettings.asStateFlow()
 
-    fun updateSettings(config: GameConfig) {
-        _gameSettings.value = config
+    fun updateSettings(settings: GameSettings) {
+        _gameSettings.value = settings
     }
 
     private val _isCreatingGame = MutableStateFlow(false)
@@ -73,7 +73,6 @@ class GameCreationViewModel @Inject constructor(
 
                 var coords = ""
 
-                // Only perform strict location logic if tracking is enabled
                 if (_gameSettings.value.trackLocation) {
                     coords = getDeviceLocation()
 
@@ -136,12 +135,22 @@ class GameCreationViewModel @Inject constructor(
     }
 }
 
-
-data class GameConfig(
-    val type: String = "501",
-    val legs: Int = 5,
-    val trackLocation: Boolean = true,
-    val checkoutRule: String = "Double Out",
+/**
+ * Flat UI-level settings collected on the Game Settings screen.
+ * Converted to the appropriate [GameConfig] subtype when navigating
+ * to the actual game screen.
+ */
+data class GameSettings(
+    val type: String = "x01",           // "x01" | "cricket"
+    val startingScore: String = "501",  // x01 only: "301" | "501" | "701"
+    val legs: Int = 3,
+    // x01 modifiers
+    val doubleOut: Boolean = false,
+    val masterIn: Boolean = false,
+    // cricket modifiers
+    val cutThroat: Boolean = false,
+    // general
     val showSuggestions: Boolean = true,
+    val trackLocation: Boolean = false,
     val showAnimations: Boolean = true
 )
