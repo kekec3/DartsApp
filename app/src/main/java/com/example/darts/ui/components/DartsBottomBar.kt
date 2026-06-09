@@ -37,9 +37,9 @@ fun DartsBottomBar(navController: NavHostController) {
             selected = currentDestination?.hierarchy?.any { it.hasRoute<HomeRoute>() } == true,
             onClick = {
                 navController.navigate(HomeRoute) {
-                    popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                    popUpTo(navController.graph.findStartDestination().id) { inclusive = true; saveState = false }
                     launchSingleTop = true
-                    restoreState = true
+                    restoreState = false
                 }
             },
             icon = { Icon(Icons.Default.Home, null, modifier = Modifier.size(26.dp)) },
@@ -66,7 +66,6 @@ fun DartsBottomBar(navController: NavHostController) {
         NavigationBarItem(
             selected = currentDestination?.hierarchy?.any { it.hasRoute<PlayersRoute>() } == true,
             onClick = {
-                // IMPORTANT: Create an instance of the data class here
                 navController.navigate(PlayersRoute(isSelection = false)) {
                     popUpTo(navController.graph.findStartDestination().id) { saveState = true }
                     launchSingleTop = true
