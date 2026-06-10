@@ -8,6 +8,9 @@ import kotlinx.serialization.Serializable
 @Serializable object SettingsRoute
 @Serializable object StatsRoute
 @Serializable object MomentsGalleryRoute
+@Serializable object TurnHistoryRoute
+@Serializable object GameSharingRoute
+@Serializable object GameImportRoute
 
 sealed interface GameRoute
 
