@@ -32,7 +32,7 @@ fun DartsNavGraph(
         composable<HomeRoute> {
             HomeScreen(
                 onViewBattles = { navController.navigate(BattlesRoute) },
-                onViewMoments = { navController.navigate(MomentsGalleryRoute) },
+                onViewMoments = {navController.navigate(MomentsGalleryRoute)},
                 onViewPlayers = { navController.navigate(PlayersRoute(isSelection = false)) },
                 onViewStats = { navController.navigate(StatsRoute) }
             )
@@ -242,6 +242,39 @@ fun DartsNavGraph(
             val args: GameTimelineRoute = backStackEntry.toRoute()
             GameTimelineScreen(
                 gameId = args.gameId,
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        // 11. Statistics Overview
+        composable<StatsRoute> {
+            StatisticsOverviewScreen()
+        }
+
+        // 12. Settings Screen
+        composable<SettingsRoute> {
+            SettingsScreen(
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        // 13. Turn History
+        composable<TurnHistoryRoute> {
+            TurnHistoryScreen(
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        // 14. Game Sharing Screen
+        composable<GameSharingRoute> {
+            GameSharingScreen(
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        // 15. Game Import Screen
+        composable<GameImportRoute> {
+            GameImportScreen(
                 onBack = { navController.popBackStack() }
             )
         }
