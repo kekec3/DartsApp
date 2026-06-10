@@ -4,6 +4,7 @@ import com.example.darts.db.entities.MomentType
 import com.example.darts.engine.DartThrow
 import com.example.darts.ui.screens.score_entry.EntryMethod
 import com.example.darts.viewModel.states.GameDisplayState
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 
 
@@ -38,4 +39,19 @@ interface BaseGameViewModel {
             EntryMethod.Camera
         )
     fun loadGame(gameId: Int, maxLegs: Int = 3, config: GameConfig)
+
+    val navigationEvents: SharedFlow<GameNavigationEvent>
+
+    fun consumeNavigationEvent()
+}
+
+sealed interface GameNavigationEvent {
+    data class LegSummary(
+        val gameId: Int,
+        val legNumber: Int
+    ): GameNavigationEvent
+
+    data class MatchSummary(
+        val gameId: Int
+    ): GameNavigationEvent
 }

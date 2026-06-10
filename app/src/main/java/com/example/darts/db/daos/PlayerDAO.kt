@@ -15,4 +15,7 @@ interface PlayerDAO {
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun addPlayer(player: Player) : Long
+
+    @Query("SELECT * FROM players WHERE idPlayer = :playerId")
+    suspend fun getPlayerById(playerId: Int): Player?
 }

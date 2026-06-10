@@ -5,5 +5,10 @@ data class GameState<T: PlayerState> (
     val currPlayer:Int = 0,
     val leg: Int = 1,
     val maxLegs: Int = 3,
-    val isFinished: Boolean = false
+    val isFinished: Boolean = false,
+
+    val legJustCompleted: Boolean = false,
+    val completedLegNumber: Int = 0,
+    val completedLegWinnerIndex: Int = -1,
+    val completedLegStats: List<T> = emptyList(),
 )

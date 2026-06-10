@@ -34,7 +34,7 @@ fun GameCreateScreen(
     battleId: Int,
     viewModel: GameCreationViewModel,
     onNewGame: () -> Unit,
-    onLegSummary: (Int) -> Unit,
+    onLegSummary: (Int, Int) -> Unit,
     onMatchSummary: (Int) -> Unit,
     onMomentsTimeline: (Int) -> Unit,
     onBack: () -> Unit
@@ -127,7 +127,7 @@ fun GameCreateScreen(
                                 ) { game ->
                                     GameItem(
                                         game = game,
-                                        onClick = { onLegSummary(game.idGame) },
+                                        onClick = { onLegSummary(game.idGame, 1) },
                                         onMomentsTimelineClick = { onMomentsTimeline(game.idGame) }
                                     )
                                 }

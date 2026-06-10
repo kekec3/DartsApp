@@ -11,6 +11,9 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -18,14 +21,28 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import com.example.darts.viewModel.GameMode
+import com.example.darts.viewModel.MatchSummaryViewModel
 
 @Composable
 fun MatchSummaryScreen(
     modifier: Modifier = Modifier,
-    battleId: Int,
+    gameId: Int,
     onBack: () -> Unit,
-    onNavigateHome: () -> Unit = {}
+    onNavigateHome: () -> Unit = {},
+    viewModel: MatchSummaryViewModel = hiltViewModel()
 ) {
+    LaunchedEffect(gameId) {
+        viewModel.load(gameId)
+    }
+
+    val state by viewModel.uiState.collectAsState()
+    val isCricket = state.gameMode == GameMode.CRICKET
+
+    val winner = state.players.maxByOrNull { it.legsWon }
+    val loser  = state.players.firstOrNull { it.playerId != winner?.playerId }
+
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -40,11 +57,10 @@ fun MatchSummaryScreen(
         ) {
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Winner Icon
             Surface(
                 modifier = Modifier.size(100.dp),
                 shape = CircleShape,
-                color = Color(0xFF1B5E20) // Deep green background
+                color = Color(0xFF1B5E20)
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
@@ -58,46 +74,68 @@ fun MatchSummaryScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Match Result Header
             Text(
-                text = "John Wins!",
+                text = "${winner?.playerName ?: ""} Wins!",
                 fontSize = 28.sp,
                 fontWeight = FontWeight.ExtraBold,
                 color = Color.White
             )
-
             Text(
-                text = "3 - 1",
+                text = "${winner?.legsWon ?: 0} - ${loser?.legsWon ?: 0}",
                 fontSize = 42.sp,
                 fontWeight = FontWeight.Black,
                 color = Color.White,
                 modifier = Modifier.padding(vertical = 8.dp)
             )
 
-            Text(
-                text = "501 • Best of 5",
-                fontSize = 16.sp,
-                color = Color.Gray
-            )
-
             Spacer(modifier = Modifier.height(40.dp))
 
-            // Stats Comparison Grid
-            Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
-                MatchStatRow("3-Dart Average", "82.14", "75.21", highlightLeft = true)
-                MatchStatRow("Checkout %", "45.5%", "31.3%", highlightLeft = true)
-                MatchStatRow("Highest Checkout", "118", "96", highlightLeft = true)
-                MatchStatRow("180s", "2", "0", highlightLeft = true)
+            if (isCricket) {
+                // MPR is stored in the average field
+                MatchStatRow(
+                    "MPR",
+                    "%.2f".format(winner?.average ?: 0f),
+                    "%.2f".format(loser?.average ?: 0f),
+                    (winner?.average ?: 0f) > (loser?.average ?: 0f)
+                )
+                MatchStatRow(
+                    "Legs Won",
+                    "${winner?.legsWon ?: 0}",
+                    "${loser?.legsWon ?: 0}",
+                    true
+                )
+            } else {
+                MatchStatRow(
+                    "3-Dart Average",
+                    "%.2f".format(winner?.average ?: 0f),
+                    "%.2f".format(loser?.average ?: 0f),
+                    (winner?.average ?: 0f) > (loser?.average ?: 0f)
+                )
+                MatchStatRow(
+                    "Checkout %",
+                    "%.1f%%".format(winner?.checkoutPercent ?: 0f),
+                    "%.1f%%".format(loser?.checkoutPercent ?: 0f),
+                    (winner?.checkoutPercent ?: 0f) > (loser?.checkoutPercent ?: 0f)
+                )
+                MatchStatRow(
+                    "Highest Checkout",
+                    "${winner?.highestCheckout ?: 0}",
+                    "${loser?.highestCheckout ?: 0}",
+                    (winner?.highestCheckout ?: 0) > (loser?.highestCheckout ?: 0)
+                )
+                MatchStatRow(
+                    "180s",
+                    "${winner?.scores180 ?: 0}",
+                    "${loser?.scores180 ?: 0}",
+                    (winner?.scores180 ?: 0) > (loser?.scores180 ?: 0)
+                )
             }
 
             Spacer(modifier = Modifier.height(40.dp))
 
-            // Back to Home Button
             Button(
                 onClick = onNavigateHome,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(60.dp),
+                modifier = Modifier.fillMaxWidth().height(60.dp),
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF76B947))
             ) {
@@ -135,7 +173,6 @@ fun MatchStatRow(
             color = if (highlightLeft) Color(0xFF76B947) else Color.White,
             textAlign = TextAlign.Start
         )
-
         Text(
             text = label,
             modifier = Modifier.weight(2f),
@@ -143,7 +180,6 @@ fun MatchStatRow(
             color = Color.Gray,
             textAlign = TextAlign.Center
         )
-
         Text(
             text = rightVal,
             modifier = Modifier.weight(1f),

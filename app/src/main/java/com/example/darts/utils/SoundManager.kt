@@ -26,7 +26,7 @@ class SoundManager @Inject constructor(
     }
 
     fun playGameOn() {
-        val resId = context.resources.getIdentifier("game_on.mp3", "raw", context.packageName)
+        val resId = context.resources.getIdentifier("game_on", "raw", context.packageName)
         Log.d("SoundManager", "playGameOn - resId: $resId")
         if (resId != 0) playSound(resId)
         else Log.e("SoundManager", "gameon file not found!")

@@ -72,16 +72,36 @@ class GameEngineCricket(
             newPlayerStates.all { it.score <= currScore }  // highest score wins
         }
 
-        if (gameFinished) {
-            newPlayerStates[curr] = newPlayerStates[curr].copy(
-                legsWon = newPlayerStates[curr].legsWon + 1
+        if (!gameFinished) {
+            // Normal turn — leg still in progress
+            state = GameState(
+                playerStates = newPlayerStates,
+                maxLegs = maxLegs,
+                isFinished = false,
+                leg = state.leg,
+                currPlayer = (curr + 1) % newPlayerStates.size,
+                legJustCompleted = false,
+                completedLegStats = emptyList()
             )
+            return state
         }
 
-        val matchWon = gameFinished && newPlayerStates[curr].legsWon > maxLegs / 2
+        // Leg just finished — increment winner's legs
+        newPlayerStates[curr] = newPlayerStates[curr].copy(
+            legsWon = newPlayerStates[curr].legsWon + 1
+        )
 
-        if (gameFinished && !matchWon) {
-            newPlayerStates = newPlayerStates.map { player ->
+        val matchWon = newPlayerStates[curr].legsWon > maxLegs / 2
+
+        // Snapshot stats BEFORE resetting the board
+        val completedLegNumber = state.leg
+        val snapshot = newPlayerStates.toList()
+
+        // Reset board for next leg (skip if match is over)
+        val nextStates = if (matchWon) {
+            newPlayerStates
+        } else {
+            newPlayerStates.map { player ->
                 player.copy(
                     numbers = mapOf(
                         15 to CricketNumber(),
@@ -98,11 +118,15 @@ class GameEngineCricket(
         }
 
         state = GameState(
-            playerStates = newPlayerStates,
+            playerStates = nextStates,
             maxLegs = maxLegs,
             isFinished = matchWon,
-            leg = if (gameFinished) state.leg + 1 else state.leg,
-            currPlayer = if (gameFinished) 0 else (curr + 1) % newPlayerStates.size
+            leg = if (matchWon) state.leg else state.leg + 1,
+            currPlayer = (state.currPlayer + 1) % newPlayerStates.size,
+            legJustCompleted = true,
+            completedLegNumber = completedLegNumber,
+            completedLegWinnerIndex = curr,
+            completedLegStats = snapshot
         )
 
         return state

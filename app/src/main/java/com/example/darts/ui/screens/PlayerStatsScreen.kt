@@ -17,14 +17,25 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import com.example.darts.viewModel.PlayerStatsViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PlayerStatsScreen(
     modifier: Modifier = Modifier,
     playerId: Int,
-    onBack: () -> Unit = {}
+    playerName: String,
+    onBack: () -> Unit = {},
+    viewModel: PlayerStatsViewModel =  hiltViewModel()
 ) {
+
+    LaunchedEffect(playerId) {
+        viewModel.load(playerId)
+    }
+
+    val career by viewModel.careerStats.collectAsState()
+
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -33,7 +44,7 @@ fun PlayerStatsScreen(
         TopAppBar(
             title = {
                 Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                    Text("John", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = Color.White)
+                    Text(playerName, fontWeight = FontWeight.Bold, fontSize = 18.sp, color = Color.White)
                 }
             },
             navigationIcon = {
@@ -50,7 +61,28 @@ fun PlayerStatsScreen(
 
         // Tabs Section
         var selectedTab by remember { mutableStateOf(0) }
-        val tabs = listOf("Overview", "Matches")
+        val tabs = listOf("Overview")
+
+        val stats = career
+
+        val average =
+            if ((stats?.totalDartsThrown ?: 0) > 0)
+                stats!!.totalScored.toFloat() /
+                        stats.totalDartsThrown * 3
+            else 0f
+
+        val winRate =
+            if ((stats?.matchesPlayed ?: 0) > 0)
+                stats!!.matchesWon * 100f /
+                        stats.matchesPlayed
+            else 0f
+
+        val checkoutPct =
+            if ((stats?.checkoutsAttempted ?: 0) > 0)
+                stats!!.checkoutsHit * 100f /
+                        stats.checkoutsAttempted
+            else 0f
+
 
         TabRow(
             selectedTabIndex = selectedTab,
@@ -105,22 +137,45 @@ fun PlayerStatsScreen(
                 shape = RoundedCornerShape(16.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    val stats = listOf(
-                        "Matches Played" to "15",
-                        "Matches Won" to "10",
-                        "Win Rate" to "66.7%",
-                        "3-Dart Average" to "81.23",
-                        "First 9 Average" to "88.11",
-                        "Checkout %" to "43.8%",
-                        "Highest Checkout" to "121",
-                        "180s" to "14",
-                        "140+ Scores" to "32",
-                        "100+ Scores" to "78"
+                    val overview = listOf(
+                        "Matches Played" to
+                                "${stats?.matchesPlayed ?: 0}",
+
+                        "Matches Won" to
+                                "${stats?.matchesWon ?: 0}",
+
+                        "Win Rate" to
+                                "%.1f%%".format(winRate),
+
+                        "3-Dart Average" to
+                                "%.2f".format(average),
+
+                        "Checkout %" to
+                                "%.1f%%".format(checkoutPct),
+
+                        "Highest Checkout" to
+                                "${stats?.highestCheckout ?: 0}",
+
+                        "180s" to
+                                "${stats?.scores180 ?: 0}",
+
+                        "140+ Scores" to
+                                "${stats?.scores140Plus ?: 0}",
+
+                        "100+ Scores" to
+                                "${stats?.scores100Plus ?: 0}",
+
+                        "Legs Played" to
+                                "${stats?.legsPlayed ?: 0}",
+
+                        "Legs Won" to
+                                "${stats?.legsWon ?: 0}"
                     )
 
-                    stats.forEachIndexed { index, (label, value) ->
+                    overview.forEachIndexed { index, (label, value) ->
                         PlayerStatItem(label, value)
-                        if (index < stats.lastIndex) {
+
+                        if (index < overview.lastIndex) {
                             HorizontalDivider(
                                 color = Color.DarkGray.copy(alpha = 0.3f),
                                 thickness = 0.5.dp,

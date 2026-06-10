@@ -6,6 +6,7 @@ import android.location.LocationManager
 import android.provider.Settings
 import android.widget.Toast
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -55,7 +56,6 @@ fun GameSettingsScreen(
 
     val isX01 = config.type.equals("x01", ignoreCase = true)
 
-    // Dropdown visibility states
     var expandedType by remember { mutableStateOf(false) }
     var expandedScore by remember { mutableStateOf(false) }
     var expandedLegs by remember { mutableStateOf(false) }
@@ -84,10 +84,11 @@ fun GameSettingsScreen(
             title = {
                 Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                     Text(
-                        text = "Game Settings",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 18.sp,
-                        color = Color.White
+                        text = "GAME SETTINGS",
+                        fontWeight = FontWeight.ExtraBold,
+                        fontSize = 16.sp,
+                        color = Color.White,
+                        letterSpacing = 1.sp
                     )
                 }
             },
@@ -106,122 +107,97 @@ fun GameSettingsScreen(
         Column(
             modifier = Modifier
                 .weight(1f)
-                .padding(16.dp)
+                .padding(20.dp)
         ) {
             Card(
                 colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1A)),
-                shape = RoundedCornerShape(12.dp)
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier.border(1.dp, Color.DarkGray.copy(alpha = 0.5f), RoundedCornerShape(16.dp))
             ) {
                 Column {
-                    // Game Type
-                    Box(modifier = Modifier.fillMaxWidth()) {
-                        SettingsRow("Game Type", config.type) { expandedType = true }
-                        DropdownMenu(
-                            expanded = expandedType,
-                            onDismissRequest = { expandedType = false },
-                            modifier = menuModifier
-                        ) {
-                            DropdownMenuItem(
-                                text = { Text("x01") },
-                                colors = menuItemColors,
-                                onClick = {
-                                    viewModel.updateSettings(
-                                        config.copy(
-                                            type = "x01",
-                                            startingScore = "501",
-                                            // reset cricket-only toggles when switching
-                                            cutThroat = false
-                                        )
-                                    )
-                                    expandedType = false
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text("Cricket") },
-                                colors = menuItemColors,
-                                onClick = {
-                                    viewModel.updateSettings(
-                                        config.copy(
-                                            type = "cricket",
-                                            startingScore = "N/A",
-                                            // reset x01-only toggles when switching
-                                            doubleOut = false,
-                                            masterIn = false
-                                        )
-                                    )
-                                    expandedType = false
-                                }
-                            )
-                        }
+                    SettingsDropdownRow(
+                        label = "Game Type",
+                        value = config.type,
+                        expanded = expandedType,
+                        onExpandedChange = { expandedType = it },
+                        menuModifier = menuModifier,
+                        menuItemColors = menuItemColors
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("x01") },
+                            colors = menuItemColors,
+                            onClick = {
+                                viewModel.updateSettings(
+                                    config.copy(type = "x01", startingScore = "501", cutThroat = false)
+                                )
+                                expandedType = false
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Cricket") },
+                            colors = menuItemColors,
+                            onClick = {
+                                viewModel.updateSettings(
+                                    config.copy(type = "cricket", startingScore = "N/A", doubleOut = false, masterIn = false)
+                                )
+                                expandedType = false
+                            }
+                        )
                     }
 
                     SettingsDivider()
 
-                    // Starting Score (x01 only)
                     if (isX01) {
-                        Box(modifier = Modifier.fillMaxWidth()) {
-                            val scoreDisplay = if (isX01) config.startingScore else "N/A"
-                            SettingsRow("Starting Score", scoreDisplay) {
-                                if (isX01) expandedScore = true
-                            }
-                            if (isX01) {
-                                DropdownMenu(
-                                    expanded = expandedScore,
-                                    onDismissRequest = { expandedScore = false },
-                                    modifier = menuModifier
-                                ) {
-                                    listOf("301", "501", "701").forEach { score ->
-                                        DropdownMenuItem(
-                                            text = { Text(score) },
-                                            colors = menuItemColors,
-                                            onClick = {
-                                                viewModel.updateSettings(config.copy(startingScore = score))
-                                                expandedScore = false
-                                            }
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    SettingsDivider()
-
-                    // Legs
-                    Box(modifier = Modifier.fillMaxWidth()) {
-                        SettingsRow(
-                            "Legs",
-                            "${config.legs} ${if (config.legs == 1) "Leg" else "Legs"}"
-                        ) { expandedLegs = true }
-                        DropdownMenu(
-                            expanded = expandedLegs,
-                            onDismissRequest = { expandedLegs = false },
-                            modifier = menuModifier
+                        SettingsDropdownRow(
+                            label = "Starting Score",
+                            value = config.startingScore,
+                            expanded = expandedScore,
+                            onExpandedChange = { expandedScore = it },
+                            menuModifier = menuModifier,
+                            menuItemColors = menuItemColors
                         ) {
-                            listOf(1, 3, 5, 7, 9).forEach { legCount ->
+                            listOf("301", "501", "701").forEach { score ->
                                 DropdownMenuItem(
-                                    text = { Text("$legCount ${if (legCount == 1) "Leg" else "Legs"}") },
+                                    text = { Text(score) },
                                     colors = menuItemColors,
                                     onClick = {
-                                        viewModel.updateSettings(config.copy(legs = legCount))
-                                        expandedLegs = false
+                                        viewModel.updateSettings(config.copy(startingScore = score))
+                                        expandedScore = false
                                     }
                                 )
                             }
                         }
+                        SettingsDivider()
+                    }
+
+                    SettingsDropdownRow(
+                        label = "Legs",
+                        value = "${config.legs} ${if (config.legs == 1) "Leg" else "Legs"}",
+                        expanded = expandedLegs,
+                        onExpandedChange = { expandedLegs = it },
+                        menuModifier = menuModifier,
+                        menuItemColors = menuItemColors
+                    ) {
+                        listOf(1, 3, 5, 7, 9).forEach { legCount ->
+                            DropdownMenuItem(
+                                text = { Text("$legCount ${if (legCount == 1) "Leg" else "Legs"}") },
+                                colors = menuItemColors,
+                                onClick = {
+                                    viewModel.updateSettings(config.copy(legs = legCount))
+                                    expandedLegs = false
+                                }
+                            )
+                        }
                     }
 
                     SettingsDivider()
 
-                    // Game-mode-specific toggles
                     if (isX01) {
                         SettingsSwitchRow(
                             label = "Double Out",
                             checked = config.doubleOut
                         ) { viewModel.updateSettings(config.copy(doubleOut = it)) }
-
                         SettingsDivider()
-
                         SettingsSwitchRow(
                             label = "Master In",
                             checked = config.masterIn
@@ -261,57 +237,34 @@ fun GameSettingsScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
-            if (config.trackLocation) {
-                if (!locationPermissionState.status.isGranted) {
-                    Text(
-                        text = "Permission required. Game creation will halt until granted.",
-                        color = Color(0xFFE53935),
-                        fontSize = 12.sp,
-                        modifier = Modifier.padding(horizontal = 8.dp)
-                    )
-                } else if (!gpsStatus) {
-                    Text(
-                        text = "GPS hardware is off. Game creation will route to system settings.",
-                        color = Color(0xFFE53935),
-                        fontSize = 12.sp,
-                        modifier = Modifier.padding(horizontal = 8.dp)
-                    )
-                } else {
-                    Text(
-                        text = "Location tracking ready and verified.",
-                        color = Color(0xFF76B947),
-                        fontSize = 12.sp,
-                        modifier = Modifier.padding(horizontal = 8.dp)
-                    )
-                }
-            } else {
-                Text(
-                    text = "Location tracking turned off. Match map data bypassed.",
-                    color = Color.Gray,
-                    fontSize = 12.sp,
-                    modifier = Modifier.padding(horizontal = 8.dp)
-                )
-            }
+            LocationStatusBox(
+                trackLocation = config.trackLocation,
+                isGranted = locationPermissionState.status.isGranted,
+                gpsStatus = gpsStatus
+            )
         }
 
-        // Bottom Action Bar
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(Color.Black)
-                .padding(16.dp),
+                .padding(horizontal = 20.dp, vertical = 24.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = "RESET TO DEFAULTS",
-                color = Color.White,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.clickable { viewModel.updateSettings(GameSettings()) }
-            )
+            TextButton(
+                onClick = { viewModel.updateSettings(GameSettings()) },
+                colors = ButtonDefaults.textButtonColors(contentColor = Color.Gray)
+            ) {
+                Text(
+                    text = "RESET DEFAULTS",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.sp
+                )
+            }
 
             Button(
                 enabled = !isCreating,
@@ -331,54 +284,85 @@ fun GameSettingsScreen(
                 colors = ButtonDefaults.buttonColors(
                     containerColor = if (isCreating) Color.Gray else Color(0xFF76B947)
                 ),
-                shape = RoundedCornerShape(8.dp),
-                modifier = Modifier.width(140.dp)
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.width(160.dp).height(48.dp)
             ) {
                 if (isCreating) {
-                    CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color.Black)
+                    CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color.Black, strokeWidth = 3.dp)
                 } else {
-                    Text("START", fontWeight = FontWeight.ExtraBold, color = Color.Black)
+                    Text("START MATCH", fontWeight = FontWeight.ExtraBold, color = Color.Black, fontSize = 14.sp)
                 }
             }
         }
     }
 }
 
-private fun runGameCreation(
-    battleId: Int,
-    config: GameSettings,
-    viewModel: GameCreationViewModel,
-    onStartMatch: (Int, GameSettings) -> Unit,
-    context: Context
-) {
-    viewModel.saveAndStartGame(
-        battleId = battleId,
-        onComplete = { gameId -> onStartMatch(gameId, config) },
-        onError = { errorMsg -> Toast.makeText(context, errorMsg, Toast.LENGTH_LONG).show() }
-    )
-}
-
 @Composable
-fun SettingsRow(label: String, value: String, onClick: () -> Unit = {}) {
+fun SettingsDropdownRow(
+    label: String,
+    value: String,
+    expanded: Boolean,
+    onExpandedChange: (Boolean) -> Unit,
+    menuModifier: Modifier,
+    menuItemColors: androidx.compose.material3.MenuItemColors,
+    content: @Composable ColumnScope.() -> Unit
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onClick() }
-            .padding(16.dp),
+            .clickable { onExpandedChange(true) } // Entire row is now clickable
+            .padding(vertical = 12.dp, horizontal = 16.dp), // Slightly more vertical padding for better touch target
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(label, color = Color.White, fontSize = 14.sp)
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(value, color = Color.Gray, fontSize = 14.sp)
-            Spacer(modifier = Modifier.width(8.dp))
-            Icon(
-                imageVector = Icons.Default.KeyboardArrowRight,
-                contentDescription = null,
-                tint = Color.Gray,
-                modifier = Modifier.size(16.dp)
-            )
+        Text(label, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+
+        // This Box acts as the anchor for the DropdownMenu
+        Box {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(value, color = Color.Gray, fontSize = 15.sp)
+                Spacer(modifier = Modifier.width(4.dp))
+                Icon(
+                    imageVector = Icons.Default.KeyboardArrowRight,
+                    contentDescription = null,
+                    tint = Color.Gray,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { onExpandedChange(false) },
+                modifier = menuModifier
+            ) {
+                content()
+            }
         }
+    }
+}
+
+@Composable
+fun LocationStatusBox(trackLocation: Boolean, isGranted: Boolean, gpsStatus: Boolean) {
+    val (text, color) = when {
+        !trackLocation -> "Location tracking disabled" to Color.Gray
+        !isGranted -> "Permission required to track location" to Color(0xFFE53935)
+        !gpsStatus -> "GPS hardware is off" to Color(0xFFE53935)
+        else -> "Location tracking ready" to Color(0xFF76B947)
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(color.copy(alpha = 0.1f), RoundedCornerShape(8.dp))
+            .border(1.dp, color.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        contentAlignment = Alignment.CenterStart
+    ) {
+        Text(
+            text = text,
+            color = color,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Medium
+        )
     }
 }
 
@@ -387,11 +371,11 @@ fun SettingsSwitchRow(label: String, checked: Boolean, onCheckedChange: (Boolean
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .padding(vertical = 8.dp, horizontal = 16.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(label, color = Color.White, fontSize = 14.sp)
+        Text(label, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Medium)
         Switch(
             checked = checked,
             onCheckedChange = onCheckedChange,
@@ -408,8 +392,22 @@ fun SettingsSwitchRow(label: String, checked: Boolean, onCheckedChange: (Boolean
 @Composable
 fun SettingsDivider() {
     HorizontalDivider(
-        color = Color.DarkGray.copy(alpha = 0.3f),
-        thickness = 0.5.dp,
+        color = Color.White.copy(alpha = 0.1f),
+        thickness = 1.dp,
         modifier = Modifier.padding(horizontal = 16.dp)
+    )
+}
+
+private fun runGameCreation(
+    battleId: Int,
+    config: GameSettings,
+    viewModel: GameCreationViewModel,
+    onStartMatch: (Int, GameSettings) -> Unit,
+    context: Context
+) {
+    viewModel.saveAndStartGame(
+        battleId = battleId,
+        onComplete = { gameId -> onStartMatch(gameId, config) },
+        onError = { errorMsg -> Toast.makeText(context, errorMsg, Toast.LENGTH_LONG).show() }
     )
 }

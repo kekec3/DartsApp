@@ -7,9 +7,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.darts.db.entities.Moment
 import com.example.darts.db.entities.MomentType
+import com.example.darts.db.entities.PlayerLegStats
 import com.example.darts.db.repositories.BattleRepository
 import com.example.darts.db.repositories.GameRepository
 import com.example.darts.db.repositories.MomentRepository
+import com.example.darts.db.repositories.StatRepository
 import com.example.darts.engine.DartThrow
 import com.example.darts.engine.GameEngineCricket
 import com.example.darts.engine.Multiplier
@@ -17,14 +19,18 @@ import com.example.darts.engine.Turn
 import com.example.darts.ui.screens.score_entry.EntryMethod
 import com.example.darts.viewModel.states.DartSlotState
 import com.example.darts.viewModel.states.GameDisplayState
+import com.example.darts.viewModel.states.GameState
 import com.example.darts.viewModel.states.PlayerDisplayState
 import com.example.darts.viewModel.states.PlayerStateCricket
 import com.example.darts.viewModel.states.StatRow
 import com.example.darts.viewModel.states.TurnDisplayState
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -39,7 +45,16 @@ class GameViewModelCricket @Inject constructor(
     private val gameRepository: GameRepository,
     private val battleRepository: BattleRepository,
     private val momentRepository: MomentRepository,
+    private val statRepository: StatRepository
 ) : ViewModel(), BaseGameViewModel {
+
+    private var isInitialized = false
+    private val _navigationEvents = MutableSharedFlow<GameNavigationEvent>(replay = 1)
+    override val navigationEvents = _navigationEvents.asSharedFlow()
+
+    override fun consumeNavigationEvent() {
+        _navigationEvents.resetReplayCache()
+    }
 
     private lateinit var engine: GameEngineCricket
     private var gameId: Int = -1
@@ -62,6 +77,9 @@ class GameViewModelCricket @Inject constructor(
 
     override fun loadGame(gameId: Int, maxLegs: Int, config: GameConfig
     ) {
+        if (isInitialized) return
+        isInitialized = true
+
         val cfg = config as CricketConfig
         this.gameId = gameId
 
@@ -98,11 +116,14 @@ class GameViewModelCricket @Inject constructor(
         Log.d("Cricket Viewmodel", "Dart Add")
         if (currentDarts.size >= 3 || _displayState.value.isFinished) return
         currentDarts.add(dart)
+        refresh() // Update slots and mark preview
         if (currentDarts.size == 3) {
-            commitTurn()
-            return
+            // Small delay so the 3rd dart's mark preview renders before the turn commits
+            viewModelScope.launch {
+                delay(300)
+                commitTurn()
+            }
         }
-        refresh() // Ensure dots and slots update
     }
 
     @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
@@ -118,12 +139,15 @@ class GameViewModelCricket @Inject constructor(
     }
 
     override fun commitTurn() {
-        Log.d("Commit Turn", "Enter")
-        val padded = currentDarts.toMutableList()
-        while (padded.size < 3) padded.add(DartThrow(0, Multiplier.SINGLE))
-        engine.submitTurn(Turn(padded))
+        if (currentDarts.isEmpty() || _displayState.value.isFinished) return
+
+        val newState = engine.submitTurn(Turn(currentDarts.toList())) // ← no padding
         currentDarts.clear()
         refresh()
+
+        if (newState.legJustCompleted) {
+            persistLegStats(newState)
+        }
     }
 
     override fun setEntryMethod(method: EntryMethod) {
@@ -182,5 +206,53 @@ class GameViewModelCricket @Inject constructor(
             ),
             isCurrent = isCurrent
         )
+    }
+
+    private fun persistLegStats(newState: GameState<PlayerStateCricket>) {
+        viewModelScope.launch {
+            val rows = newState.completedLegStats.mapIndexed { index, ps ->
+                val totalMarks = ps.numbers.values.sumOf { it.marks }
+                val mpr = if (ps.dartsThrown > 0)
+                    (totalMarks.toFloat() / ps.dartsThrown) * 3f
+                else 0f
+                PlayerLegStats(
+                    gameId = gameId,
+                    playerId = ps.player.idPlayer,
+                    legNumber = newState.completedLegNumber,
+                    won = (index == newState.completedLegWinnerIndex),
+                    dartsThrown = ps.dartsThrown,
+                    totalScored = ps.score,
+                    average = mpr,          // MPR stored in the average slot
+                    checkoutAttempts = 0,            // not applicable
+                    checkoutsHit = 0,
+                    highestCheckout = 0,
+                    scores180 = 0,
+                    scores140Plus = 0,
+                    scores100Plus = 0,
+                )
+            }
+            val savedRows = statRepository.saveLegStats(rows)
+
+            val matchWinnerId = if (newState.isFinished)
+                newState.playerStates.maxByOrNull { it.legsWon }?.player?.idPlayer
+            else null
+
+            statRepository.updateCareerStats(
+                legStats      = savedRows,
+                isMatchEnd    = newState.isFinished,
+                matchWinnerId = matchWinnerId,
+            )
+
+            if (newState.isFinished) {
+                _navigationEvents.emit(GameNavigationEvent.MatchSummary(gameId))
+            } else {
+                _navigationEvents.emit(
+                    GameNavigationEvent.LegSummary(
+                        gameId = gameId,
+                        legNumber = newState.completedLegNumber
+                    )
+                )
+            }
+        }
     }
 }

@@ -29,4 +29,7 @@ object DatabaseModule {
     fun provideParticipateDao(db: DartsDatabase) = db.participateDao()
     @Provides
     fun provideBattleDao(db: DartsDatabase) =  db.battleDao()
+
+    @Provides
+    fun provideStatDao(db: DartsDatabase) = db.statDao()
 }

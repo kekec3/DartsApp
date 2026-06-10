@@ -77,7 +77,7 @@ fun PlayersScreen(
     modifier: Modifier = Modifier,
     isSelectionMode: Boolean = false,
     battleViewModel: BattleViewModel = hiltViewModel(),
-    onPlayerClick: (Int) -> Unit = {},
+    onPlayerClick: (Player) -> Unit = {},
     onBattleCreated: (Int) -> Unit = {}
 ) {
     var searchQuery by remember { mutableStateOf("") }
@@ -232,7 +232,7 @@ fun PlayersScreen(
                                 if (isSelectionMode) {
                                     battleViewModel.togglePlayer(player.idPlayer)
                                 } else {
-                                    onPlayerClick(player.idPlayer)
+                                    onPlayerClick(player)
                                 }
                             }
                         )

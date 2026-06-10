@@ -1,6 +1,7 @@
 package com.example.darts.ui.navigation
 
 import android.os.Build
+import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -54,8 +55,8 @@ fun DartsNavGraph(
             PlayersScreen(
                 isSelectionMode = args.isSelection,
                 battleViewModel = hiltViewModel(),
-                onPlayerClick = { id ->
-                    navController.navigate(PlayerStatsRoute(playerId = id))
+                onPlayerClick = { player ->
+                    navController.navigate(PlayerStatsRoute(playerId = player.idPlayer, playerName = player.username))
                 },
                 onBattleCreated = { id ->
                     navController.navigate(GameCreateScreenRoute(battleId = id))
@@ -66,8 +67,10 @@ fun DartsNavGraph(
         // 4. Player Stats
         composable<PlayerStatsRoute> { backStackEntry ->
             val args: PlayerStatsRoute = backStackEntry.toRoute()
+
             PlayerStatsScreen(
                 playerId = args.playerId,
+                playerName = args.playerName,
                 onBack = { navController.popBackStack() }
             )
         }
@@ -79,8 +82,19 @@ fun DartsNavGraph(
                 battleId = args.battleId,
                 viewModel = hiltViewModel(),
                 onNewGame = { navController.navigate(GameSettingsRoute(battleId = args.battleId)) },
-                onLegSummary = { gId -> navController.navigate(LegSummaryRoute(gameId = gId)) },
-                onMatchSummary = { bId -> navController.navigate(MatchSummaryRoute(battleId = bId)) },
+                onLegSummary = { gameId, legNumber ->
+                    navController.navigate(
+                        LegSummaryRoute(
+                            gameId = gameId,
+                            legNumber = legNumber
+                        )
+                    )
+                },
+                onMatchSummary = { gameId ->
+                    navController.navigate(
+                        MatchSummaryRoute(gameId)
+                    )
+                },
                 onMomentsTimeline = { gId -> navController.navigate(GameTimelineRoute(gameId = gId)) },
                 onBack = { navController.popBackStack() }
             )
@@ -132,7 +146,25 @@ fun DartsNavGraph(
                     maxLegs = args.maxLegs
                 )
             }
-            GameScreen(viewModel = viewModel, gameId = args.gameId)
+            GameScreen(
+                viewModel = viewModel,
+                gameId = args.gameId,
+                onLegSummary = { gameId, legNumber ->
+                    viewModel.consumeNavigationEvent()
+                    navController.navigate(
+                        LegSummaryRoute(
+                            gameId = gameId,
+                            legNumber = legNumber
+                        )
+                    )
+                },
+                onMatchSummary = { gameId ->
+                    viewModel.consumeNavigationEvent()
+                    navController.navigate(
+                        MatchSummaryRoute(gameId)
+                    )
+                }
+            )
         }
 
         // 7b. Cricket Scoring Screen
@@ -147,23 +179,54 @@ fun DartsNavGraph(
                     maxLegs = args.maxLegs
                 )
             }
-            GameScreen(viewModel = viewModel, gameId = args.gameId)
+            GameScreen(
+                viewModel = viewModel,
+                gameId = args.gameId,
+                onLegSummary = { gameId, legNumber ->
+                    Log.d("CRICKET_NAV", "onLegSummary called gameId=$gameId leg=$legNumber")
+
+                    viewModel.consumeNavigationEvent()
+                    navController.navigate(
+                        LegSummaryRoute(
+                            gameId = gameId,
+                            legNumber = legNumber
+                        )
+                    )
+                },
+                onMatchSummary = { gameId ->
+                    Log.d("CRICKET_NAV", "onMatchSummary called gameId=$gameId")
+
+                    viewModel.consumeNavigationEvent()
+                    navController.navigate(
+                        MatchSummaryRoute(gameId)
+                    )
+                }
+            )
         }
 
         // 8. Summaries
         composable<LegSummaryRoute> { backStackEntry ->
             val args: LegSummaryRoute = backStackEntry.toRoute()
+
             LegSummaryScreen(
                 gameId = args.gameId,
-                onBack = { navController.popBackStack() }
+                legNumber = args.legNumber,
+                onBack = { navController.popBackStack() },
+                onContinue = { navController.popBackStack() }
             )
         }
 
         composable<MatchSummaryRoute> { backStackEntry ->
             val args: MatchSummaryRoute = backStackEntry.toRoute()
+
             MatchSummaryScreen(
-                battleId = args.battleId,
-                onBack = { navController.popBackStack() }
+                gameId = args.gameId,
+                onBack = { navController.popBackStack() },
+                onNavigateHome = {
+                    navController.navigate(HomeRoute) {
+                        popUpTo<HomeRoute>()
+                    }
+                }
             )
         }
 

@@ -34,6 +34,7 @@ import com.example.darts.ui.screens.score_entry.VoiceRecognitionScreen
 import com.example.darts.ui.theme.LimePrimary
 import com.example.darts.ui.theme.TextSecondary
 import com.example.darts.viewModel.BaseGameViewModel
+import com.example.darts.viewModel.GameNavigationEvent
 import com.example.darts.viewModel.states.DartSlotState
 import com.example.darts.viewModel.states.PlayerDisplayState
 import com.example.darts.viewModel.states.TurnDisplayState
@@ -53,15 +54,36 @@ fun GameScreen(
     viewModel: BaseGameViewModel,
     onNavigateBack: () -> Unit = {},
     onNavigateStats: () -> Unit = {},
-    gameId: Int
+    gameId: Int,
+    onLegSummary: (Int, Int) -> Unit,
+    onMatchSummary: (Int) -> Unit
 ) {
     val state  by viewModel.displayState.collectAsState()
     val method by viewModel.activeEntryMethod.collectAsState()
     var showArOverlay by remember { mutableStateOf(false) }
 
-    if (state.isFinished && state.winner != null) {
-        WinnerScreen(winnerName = state.winner!!, onBack = onNavigateBack)
-        return
+
+    LaunchedEffect(Unit) {
+
+        viewModel.navigationEvents.collect { event ->
+            Log.d("CRICKET_NAV", "GameScreen collected event: $event")
+
+            when (event) {
+
+                is GameNavigationEvent.LegSummary -> {
+                    viewModel.consumeNavigationEvent()
+                    onLegSummary(
+                        event.gameId,
+                        event.legNumber
+                    )
+                }
+
+                is GameNavigationEvent.MatchSummary -> {
+                    viewModel.consumeNavigationEvent()
+                    onMatchSummary(event.gameId)
+                }
+            }
+        }
     }
 
     Box(
@@ -210,8 +232,8 @@ fun GameScreen(
 
 @Composable
 private fun GameTopBar(
-    title: String, 
-    onBack: () -> Unit, 
+    title: String,
+    onBack: () -> Unit,
     onStats: () -> Unit,
     onToggleAr: () -> Unit
 ) {

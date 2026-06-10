@@ -8,9 +8,11 @@ import androidx.lifecycle.viewModelScope
 import com.example.darts.db.entities.Moment
 import com.example.darts.db.entities.MomentType
 import com.example.darts.db.entities.Player
+import com.example.darts.db.entities.PlayerLegStats
 import com.example.darts.db.repositories.BattleRepository
 import com.example.darts.db.repositories.GameRepository
 import com.example.darts.db.repositories.MomentRepository
+import com.example.darts.db.repositories.StatRepository
 import com.example.darts.engine.DartThrow
 import com.example.darts.engine.GameEngineX01
 import com.example.darts.engine.Multiplier
@@ -19,13 +21,16 @@ import com.example.darts.ui.screens.score_entry.EntryMethod
 import com.example.darts.utils.SoundManager
 import com.example.darts.viewModel.states.DartSlotState
 import com.example.darts.viewModel.states.GameDisplayState
+import com.example.darts.viewModel.states.GameState
 import com.example.darts.viewModel.states.PlayerDisplayState
 import com.example.darts.viewModel.states.PlayerStateX01
 import com.example.darts.viewModel.states.StatRow
 import com.example.darts.viewModel.states.TurnDisplayState
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -35,8 +40,18 @@ class GameViewModelX01 @Inject constructor(
     private val gameRepository: GameRepository,
     private val battleRepository: BattleRepository,
     private val momentRepository: MomentRepository,
-    private val soundManager: SoundManager
+    private val soundManager: SoundManager,
+    private val statRepository: StatRepository
 ) : ViewModel(), BaseGameViewModel {
+
+    private val _navigationEvents = MutableSharedFlow<GameNavigationEvent>()
+    override val navigationEvents = _navigationEvents.asSharedFlow()
+
+    override fun consumeNavigationEvent() {
+
+    }
+
+    private var isInitialized = false
 
     private lateinit var engine: GameEngineX01
     private var gameId: Int = -1
@@ -52,6 +67,9 @@ class GameViewModelX01 @Inject constructor(
     }
 
     override fun loadGame(gameId: Int, maxLegs: Int, config: GameConfig) {
+        if (isInitialized) return
+        isInitialized = true
+
         val cfg = config as XO1Config
         this.gameId = gameId
 
@@ -99,12 +117,15 @@ class GameViewModelX01 @Inject constructor(
         if (currentDarts.size >= 3 || _displayState.value.isFinished) return
         currentDarts.add(dart)
 
-        val state = _displayState.value.turn
+        // Bug fix: derive remaining directly from the engine's authoritative score,
+        // not from the display-state snapshot. The snapshot already has previous darts
+        // subtracted, so using it as a base would double-count them on dart 2 and 3.
+        val engineState = engine.getState()
+        val currentScore = engineState.playerStates[engineState.currPlayer].score
         val newTotal = currentDarts.sumOf { it.score() }
-        val remaining = (state.remaining ?: 0) - newTotal
+        val remaining = currentScore - newTotal
 
         val isCheckout = remaining == 0 && (!engine.doubleOut || dart.isDouble())
-
         val isBust = remaining < 0 || (remaining == 1 && engine.doubleOut)
 
         if (currentDarts.size == 3 || isCheckout || isBust) {
@@ -130,24 +151,95 @@ class GameViewModelX01 @Inject constructor(
     override fun commitTurn() {
         if (currentDarts.isEmpty() || _displayState.value.isFinished) return
 
-        val turnScore = currentDarts.sumOf { it.score() }
-        val currentPlayerScore = engine.getState().playerStates[engine.getState().currPlayer].score
-        val remaining = currentPlayerScore - turnScore
-        val isBust = remaining < 0 || (remaining == 1 && engine.doubleOut)
+        val preTurnState = engine.getState()
+        val turnScore    = currentDarts.sumOf { it.score() }
+        val remaining    = preTurnState.playerStates[preTurnState.currPlayer].score - turnScore
+        val isBust       = remaining < 0 || (remaining == 1 && engine.doubleOut)
 
-        val padded = currentDarts.toMutableList()
-        while (padded.size < 3) padded.add(DartThrow(0, Multiplier.SINGLE))
-        engine.submitTurn(Turn(padded))
-
-        val isWin = engine.getState().isFinished
+        // Bug fix: do NOT pad to 3 darts. Padding caused the engine to count every
+        // turn as exactly 3 darts thrown (corrupting averages), and broke undo —
+        // dropLast(1) on a padded list removed the padding instead of the real
+        // checkout dart. Submit only the darts that were actually thrown.
+        val newState = engine.submitTurn(Turn(currentDarts.toList()))
 
         currentDarts.clear()
         refresh()
 
+        // ── Persist stats whenever a leg ends ────────────────────────────
+        if (newState.legJustCompleted) {
+            persistLegStats(newState)
+
+            viewModelScope.launch {
+
+                if (newState.isFinished) {
+
+                    _navigationEvents.emit(
+                        GameNavigationEvent.MatchSummary(gameId)
+                    )
+
+                } else {
+
+                    val showLegSummary = true
+
+                    if (showLegSummary) {
+
+                        Log.d(
+                            "LEG_NAV",
+                            "Emitting summary for leg ${newState.completedLegNumber}"
+                        )
+
+                        _navigationEvents.emit(
+                            GameNavigationEvent.LegSummary(
+                                gameId = gameId,
+                                legNumber = newState.completedLegNumber
+                            )
+                        )
+                    }
+                }
+            }
+        }
+
+        // ── Sounds ───────────────────────────────────────────────────────
         when {
-            isWin -> soundManager.playGameShot()
-            isBust -> soundManager.playScore(0)
-            else   -> soundManager.playScore(turnScore)
+            newState.isFinished -> soundManager.playGameShot()
+            isBust              -> soundManager.playScore(0)
+            else                -> soundManager.playScore(turnScore)
+        }
+    }
+
+    private fun persistLegStats(newState: GameState<PlayerStateX01>) {
+        viewModelScope.launch {
+            val rows = newState.completedLegStats.mapIndexed { index, ps ->
+                val avg = if (ps.legDartsThrown > 0)
+                    (ps.legTotalScored.toFloat() / ps.legDartsThrown) * 3f
+                else 0f
+                PlayerLegStats(
+                    gameId = gameId,
+                    playerId = ps.player.idPlayer,
+                    legNumber = newState.completedLegNumber,
+                    won = (index == newState.completedLegWinnerIndex),
+                    dartsThrown = ps.legDartsThrown,
+                    totalScored = ps.legTotalScored,
+                    average = avg,
+                    checkoutAttempts = ps.legCheckoutAttempts,
+                    checkoutsHit = ps.legCheckoutsHit,
+                    highestCheckout = ps.legHighestCheckout,
+                    scores180 = ps.leg180s,
+                    scores140Plus = ps.leg140Plus,
+                    scores100Plus = ps.leg100Plus,
+                )
+            }
+            val savedRows = statRepository.saveLegStats(rows)
+
+            val matchWinnerId = if (newState.isFinished)
+                newState.playerStates.maxByOrNull { it.legsWon }?.player?.idPlayer
+            else null
+
+            statRepository.updateCareerStats(
+                legStats      = savedRows,
+                isMatchEnd    = newState.isFinished,
+                matchWinnerId = matchWinnerId,
+            )
         }
     }
 
