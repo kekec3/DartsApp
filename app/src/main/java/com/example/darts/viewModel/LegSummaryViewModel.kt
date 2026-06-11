@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.darts.db.entities.PlayerLegStats
+import com.example.darts.db.repositories.GameRepository
 import com.example.darts.db.repositories.PlayerRepository
 import com.example.darts.db.repositories.StatRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -24,7 +25,8 @@ data class LegSummaryUiState(
 @HiltViewModel
 class LegSummaryViewModel @Inject constructor(
     private val statRepository: StatRepository,
-    private val playerRepository: PlayerRepository
+    private val playerRepository: PlayerRepository,
+    private val gameRepository: GameRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(LegSummaryUiState())
@@ -42,9 +44,8 @@ class LegSummaryViewModel @Inject constructor(
             val player1 = playerRepository.getPlayerById(p1.playerId)
             val player2 = playerRepository.getPlayerById(p2.playerId)
 
-            // Cricket stores 0 for checkoutAttempts; use that to detect mode
-            val mode = if (p1.checkoutAttempts == 0 && p1.highestCheckout == 0)
-                GameMode.CRICKET else GameMode.X01
+            val game = gameRepository.getGameById(gameId)?.type ?: "x01"
+            val mode = if (game.lowercase() == "cricket") GameMode.CRICKET else GameMode.X01
 
             _uiState.value = LegSummaryUiState(
                 player1Name = player1?.username ?: "",

@@ -262,12 +262,15 @@ class GameViewModelCricket @Inject constructor(
             if (newState.isFinished) {
                 _navigationEvents.emit(GameNavigationEvent.MatchSummary(gameId))
             } else {
-                _navigationEvents.emit(
-                    GameNavigationEvent.LegSummary(
-                        gameId = gameId,
-                        legNumber = newState.completedLegNumber
+                val showLegSummary = true
+                if (showLegSummary) {
+                    _navigationEvents.emit(
+                        GameNavigationEvent.LegSummary(
+                            gameId = gameId,
+                            legNumber = newState.completedLegNumber
+                        )
                     )
-                )
+                }
             }
         }
     }

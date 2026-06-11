@@ -173,7 +173,7 @@ class GameViewModelX01 @Inject constructor(
                 playerName    = preTurnState.playerStates[index % preTurnState.playerStates.size].player.username,
                 dartDisplays  = t.darts.map { it.displayString() },
                 turnScore     = t.darts.sumOf { it.score() },
-                remainingAfter = preTurnState.playerStates[index % preTurnState.playerStates.size].score      // null if Cricket
+                remainingAfter = remaining      // null if Cricket
             )
         }
 
@@ -183,35 +183,6 @@ class GameViewModelX01 @Inject constructor(
         // ── Persist stats whenever a leg ends ────────────────────────────
         if (newState.legJustCompleted) {
             persistLegStats(newState)
-
-            viewModelScope.launch {
-
-                if (newState.isFinished) {
-
-                    _navigationEvents.emit(
-                        GameNavigationEvent.MatchSummary(gameId)
-                    )
-
-                } else {
-
-                    val showLegSummary = true
-
-                    if (showLegSummary) {
-
-                        Log.d(
-                            "LEG_NAV",
-                            "Emitting summary for leg ${newState.completedLegNumber}"
-                        )
-
-                        _navigationEvents.emit(
-                            GameNavigationEvent.LegSummary(
-                                gameId = gameId,
-                                legNumber = newState.completedLegNumber
-                            )
-                        )
-                    }
-                }
-            }
         }
 
         // ── Sounds ───────────────────────────────────────────────────────
@@ -255,6 +226,21 @@ class GameViewModelX01 @Inject constructor(
                 isMatchEnd    = newState.isFinished,
                 matchWinnerId = matchWinnerId,
             )
+
+            if (newState.isFinished) {
+                _navigationEvents.emit(GameNavigationEvent.MatchSummary(gameId))
+            } else {
+                val showLegSummary = true
+                if (showLegSummary) {
+                    _navigationEvents.emit(
+                        GameNavigationEvent.LegSummary(
+                            gameId = gameId,
+                            legNumber = newState.completedLegNumber
+                        )
+                    )
+                }
+            }
+
         }
     }
 
