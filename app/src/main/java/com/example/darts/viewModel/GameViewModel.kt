@@ -23,6 +23,7 @@ data class CricketConfig(
 interface BaseGameViewModel {
     val displayState: StateFlow<GameDisplayState>
     val activeEntryMethod: StateFlow<EntryMethod>
+    val turnHistory: StateFlow<List<TurnSummary>>
 
     fun addDart(dart: DartThrow)
     fun undoLastDart()
@@ -55,3 +56,11 @@ sealed interface GameNavigationEvent {
         val gameId: Int
     ): GameNavigationEvent
 }
+
+data class TurnSummary(
+    val turnNumber: Int,
+    val playerName: String,
+    val dartDisplays: List<String>,
+    val turnScore: Int,
+    val remainingAfter: Int? = null
+)

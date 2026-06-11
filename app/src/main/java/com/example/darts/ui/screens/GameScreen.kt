@@ -22,6 +22,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.darts.ui.screens.MomentScreen
+import com.example.darts.ui.screens.TurnHistoryScreen
 import com.example.darts.ui.screens.score_entry.CameraArRecommendationScreen
 import com.example.darts.ui.screens.score_entry.ArrowIndicator
 import com.example.darts.ui.screens.score_entry.BoardButtonsEntry
@@ -61,12 +62,13 @@ fun GameScreen(
     val state  by viewModel.displayState.collectAsState()
     val method by viewModel.activeEntryMethod.collectAsState()
     var showArOverlay by remember { mutableStateOf(false) }
+    var showTurnHistory by remember {mutableStateOf(false)}
+    val history by viewModel.turnHistory.collectAsState()
 
 
     LaunchedEffect(Unit) {
 
         viewModel.navigationEvents.collect { event ->
-            Log.d("CRICKET_NAV", "GameScreen collected event: $event")
 
             when (event) {
 
@@ -97,7 +99,7 @@ fun GameScreen(
             GameTopBar(
                 title   = state.gameTitle,
                 onBack  = onNavigateBack,
-                onStats = onNavigateStats,
+                onStats = { showTurnHistory = true },
                 onToggleAr = { showArOverlay = true }
             )
 
@@ -225,6 +227,18 @@ fun GameScreen(
                 )
             }
         }
+
+        if (showTurnHistory) {
+            AnimatedVisibility(
+                visible      = showTurnHistory,
+                enter        = slideInVertically { it },
+                exit         = slideOutVertically { it }
+            ) {
+                TurnHistoryScreen(
+                    turns   = history,
+                    onClose = { showTurnHistory = false }
+                )
+            }        }
     }
 }
 

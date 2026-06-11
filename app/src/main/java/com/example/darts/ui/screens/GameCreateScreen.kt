@@ -127,7 +127,7 @@ fun GameCreateScreen(
                                 ) { game ->
                                     GameItem(
                                         game = game,
-                                        onClick = { onLegSummary(game.idGame, 1) },
+                                        onClick = { onMatchSummary(game.idGame) },
                                         onMomentsTimelineClick = { onMomentsTimeline(game.idGame) }
                                     )
                                 }

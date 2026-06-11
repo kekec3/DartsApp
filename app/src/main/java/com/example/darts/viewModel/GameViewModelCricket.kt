@@ -52,6 +52,9 @@ class GameViewModelCricket @Inject constructor(
     private val _navigationEvents = MutableSharedFlow<GameNavigationEvent>(replay = 1)
     override val navigationEvents = _navigationEvents.asSharedFlow()
 
+    private val _turnHistory = MutableStateFlow<List<TurnSummary>>(emptyList())
+    override val turnHistory: StateFlow<List<TurnSummary>> = _turnHistory.asStateFlow()
+
     override fun consumeNavigationEvent() {
         _navigationEvents.resetReplayCache()
     }
@@ -93,6 +96,8 @@ class GameViewModelCricket @Inject constructor(
                 maxLegs = maxLegs
             )
         }
+
+        _turnHistory.value = emptyList()
     }
 
     private val currentDarts = mutableListOf<DartThrow>()
@@ -134,6 +139,7 @@ class GameViewModelCricket @Inject constructor(
             for (dart in turn.darts.dropLast(1)) {
                 currentDarts.add(dart)
             }
+            _turnHistory.value = _turnHistory.value.dropLast(1)
         }
         refresh()
     }
@@ -144,6 +150,16 @@ class GameViewModelCricket @Inject constructor(
         val newState = engine.submitTurn(Turn(currentDarts.toList())) // ← no padding
         currentDarts.clear()
         refresh()
+
+        _turnHistory.value = engine.turnHistory.mapIndexed { index, t ->
+            TurnSummary(
+                turnNumber    = index + 1,
+                playerName    = _cricketUiState.value.playerStates[index % _cricketUiState.value.playerStates.size].player.username,          // adapt to your Turn fields
+                dartDisplays  = t.darts.map { it.displayString() },
+                turnScore     = t.darts.sumOf { it.multiplier.mul },
+                remainingAfter = null
+            )
+        }
 
         if (newState.legJustCompleted) {
             persistLegStats(newState)

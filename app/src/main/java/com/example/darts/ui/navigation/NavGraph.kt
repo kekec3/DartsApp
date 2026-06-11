@@ -183,7 +183,6 @@ fun DartsNavGraph(
                 viewModel = viewModel,
                 gameId = args.gameId,
                 onLegSummary = { gameId, legNumber ->
-                    Log.d("CRICKET_NAV", "onLegSummary called gameId=$gameId leg=$legNumber")
 
                     viewModel.consumeNavigationEvent()
                     navController.navigate(
@@ -194,7 +193,6 @@ fun DartsNavGraph(
                     )
                 },
                 onMatchSummary = { gameId ->
-                    Log.d("CRICKET_NAV", "onMatchSummary called gameId=$gameId")
 
                     viewModel.consumeNavigationEvent()
                     navController.navigate(
@@ -259,11 +257,11 @@ fun DartsNavGraph(
         }
 
         // 13. Turn History
-        composable<TurnHistoryRoute> {
+        /*composable<TurnHistoryRoute> {
             TurnHistoryScreen(
                 onBack = { navController.popBackStack() }
             )
-        }
+        }*/
 
         // 14. Game Sharing Screen
         composable<GameSharingRoute> {
