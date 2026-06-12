@@ -33,6 +33,18 @@ abstract class StatDao {
     """)
     abstract suspend fun getAllLegStatsForGame(gameId: Int): List<PlayerLegStats>
 
+    /**
+     * All legs for a player across all games, in chronological order.
+     * Used to build the per-leg average trend chart.
+     * gameId is a reliable proxy for game creation order.
+     */
+    @Query("""
+        SELECT * FROM player_leg_stats
+        WHERE playerId = :playerId
+        ORDER BY gameId ASC, legNumber ASC
+    """)
+    abstract fun observeLegStatsForPlayer(playerId: Int): Flow<List<PlayerLegStats>>
+
     // ── Career stats ──────────────────────────────────────────────────────
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)

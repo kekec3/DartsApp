@@ -57,7 +57,9 @@ fun DartsNavGraph(
                 isSelectionMode = args.isSelection,
                 battleViewModel = hiltViewModel(),
                 onPlayerClick = { player ->
-                    navController.navigate(PlayerStatsRoute(playerId = player.idPlayer, playerName = player.username))
+                    navController.navigate(
+                        PlayerStatsRoute(playerId = player.idPlayer, playerName = player.username)
+                    )
                 },
                 onBattleCreated = { id ->
                     navController.navigate(GameCreateScreenRoute(battleId = id))
@@ -65,13 +67,13 @@ fun DartsNavGraph(
             )
         }
 
-        // 4. Player Stats
+        // 4. Player Stats  ← now uses StatisticsOverviewScreen
         composable<PlayerStatsRoute> { backStackEntry ->
             val args: PlayerStatsRoute = backStackEntry.toRoute()
             PlayerStatsScreen(
                 playerId = args.playerId,
                 playerName = args.playerName,
-                onBack = { navController.popBackStack() }
+                onBack     = { navController.popBackStack() }
             )
         }
 
@@ -84,16 +86,11 @@ fun DartsNavGraph(
                 onNewGame = { navController.navigate(GameSettingsRoute(battleId = args.battleId)) },
                 onLegSummary = { gameId, legNumber ->
                     navController.navigate(
-                        LegSummaryRoute(
-                            gameId = gameId,
-                            legNumber = legNumber
-                        )
+                        LegSummaryRoute(gameId = gameId, legNumber = legNumber)
                     )
                 },
                 onMatchSummary = { gameId ->
-                    navController.navigate(
-                        MatchSummaryRoute(gameId)
-                    )
+                    navController.navigate(MatchSummaryRoute(gameId))
                 },
                 onMomentsTimeline = { gId -> navController.navigate(GameTimelineRoute(gameId = gId)) },
                 onBack = { navController.popBackStack() }
@@ -111,18 +108,18 @@ fun DartsNavGraph(
                     when (settings.type.lowercase()) {
                         "cricket" -> navController.navigate(
                             CricketGameRoute(
-                                gameId = gameId,
-                                maxLegs = settings.legs,
+                                gameId   = gameId,
+                                maxLegs  = settings.legs,
                                 cutThroat = settings.cutThroat
                             )
                         )
                         else -> navController.navigate(
                             X01GameRoute(
-                                gameId = gameId,
-                                maxLegs = settings.legs,
-                                target = settings.startingScore.toIntOrNull() ?: 501,
+                                gameId    = gameId,
+                                maxLegs   = settings.legs,
+                                target    = settings.startingScore.toIntOrNull() ?: 501,
                                 doubleOut = settings.doubleOut,
-                                masterIn = settings.masterIn
+                                masterIn  = settings.masterIn
                             )
                         )
                     }
@@ -134,35 +131,24 @@ fun DartsNavGraph(
         composable<X01GameRoute> { backStackEntry ->
             val args: X01GameRoute = backStackEntry.toRoute()
             val config = XO1Config(
-                target = args.target,
+                target    = args.target,
                 doubleOut = args.doubleOut,
-                masterIn = args.masterIn
+                masterIn  = args.masterIn
             )
             val viewModel: BaseGameViewModel = hiltViewModel<GameViewModelX01>()
             LaunchedEffect(args.gameId) {
-                viewModel.loadGame(
-                    gameId = args.gameId,
-                    config = config,
-                    maxLegs = args.maxLegs
-                )
+                viewModel.loadGame(gameId = args.gameId, config = config, maxLegs = args.maxLegs)
             }
             GameScreen(
                 viewModel = viewModel,
-                gameId = args.gameId,
+                gameId    = args.gameId,
                 onLegSummary = { gameId, legNumber ->
                     viewModel.consumeNavigationEvent()
-                    navController.navigate(
-                        LegSummaryRoute(
-                            gameId = gameId,
-                            legNumber = legNumber
-                        )
-                    )
+                    navController.navigate(LegSummaryRoute(gameId = gameId, legNumber = legNumber))
                 },
                 onMatchSummary = { gameId ->
                     viewModel.consumeNavigationEvent()
-                    navController.navigate(
-                        MatchSummaryRoute(gameId)
-                    )
+                    navController.navigate(MatchSummaryRoute(gameId))
                 }
             )
         }
@@ -173,29 +159,18 @@ fun DartsNavGraph(
             val config = CricketConfig(cutthroat = args.cutThroat)
             val viewModel: BaseGameViewModel = hiltViewModel<GameViewModelCricket>()
             LaunchedEffect(args.gameId) {
-                viewModel.loadGame(
-                    gameId = args.gameId,
-                    config = config,
-                    maxLegs = args.maxLegs
-                )
+                viewModel.loadGame(gameId = args.gameId, config = config, maxLegs = args.maxLegs)
             }
             GameScreen(
                 viewModel = viewModel,
-                gameId = args.gameId,
+                gameId    = args.gameId,
                 onLegSummary = { gameId, legNumber ->
                     viewModel.consumeNavigationEvent()
-                    navController.navigate(
-                        LegSummaryRoute(
-                            gameId = gameId,
-                            legNumber = legNumber
-                        )
-                    )
+                    navController.navigate(LegSummaryRoute(gameId = gameId, legNumber = legNumber))
                 },
                 onMatchSummary = { gameId ->
                     viewModel.consumeNavigationEvent()
-                    navController.navigate(
-                        MatchSummaryRoute(gameId)
-                    )
+                    navController.navigate(MatchSummaryRoute(gameId))
                 }
             )
         }
@@ -204,9 +179,9 @@ fun DartsNavGraph(
         composable<LegSummaryRoute> { backStackEntry ->
             val args: LegSummaryRoute = backStackEntry.toRoute()
             LegSummaryScreen(
-                gameId = args.gameId,
+                gameId    = args.gameId,
                 legNumber = args.legNumber,
-                onBack = { navController.popBackStack() },
+                onBack     = { navController.popBackStack() },
                 onContinue = { navController.popBackStack() }
             )
         }
@@ -226,49 +201,38 @@ fun DartsNavGraph(
 
         // 9. Moments Gallery
         composable<MomentsGalleryRoute> {
-            MomentsGalleryScreen(
-                onBack = { navController.popBackStack() }
-            )
+            MomentsGalleryScreen(onBack = { navController.popBackStack() })
         }
 
         // 10. Timeline Screen
         composable<GameTimelineRoute> { backStackEntry ->
             val args: GameTimelineRoute = backStackEntry.toRoute()
-            GameTimelineScreen(
-                gameId = args.gameId,
-                onBack = { navController.popBackStack() }
-            )
+            GameTimelineScreen(gameId = args.gameId, onBack = { navController.popBackStack() })
         }
 
-        // 11. Statistics Overview
+        // 11. Statistics Overview (global, no player context)
         composable<StatsRoute> {
             StatisticsOverviewScreen()
         }
 
         // 12. Settings Screen
         composable<SettingsRoute> {
-            SettingsScreen(
-                onBack = { navController.popBackStack() }
-            )
+            SettingsScreen(onBack = { navController.popBackStack() })
         }
 
-        // 13. Game Sharing Screen
+        // 13. Turn History
+        /*composable<TurnHistoryRoute> {
+            TurnHistoryScreen(onBack = { navController.popBackStack() })
+        }*/
+
+        // 14. Game Sharing Screen
         composable<GameSharingRoute> {
-            GameSharingScreen(
-                viewModel = hiltViewModel(), // Injects the custom export sharing viewModel setup
-                onBack = { navController.popBackStack() }
-            )
+            GameSharingScreen(onBack = { navController.popBackStack() })
         }
 
-        // 14. Game Import Screen with explicit type-safe Deep Linking registration
-        composable<GameImportRoute>(
-            deepLinks = listOf(
-                navDeepLink { uriPattern = "https://example.com/darts/import" }
-            )
-        ) {
-            GameImportScreen(
-                onBack = { navController.popBackStack() }
-            )
+        // 15. Game Import Screen
+        composable<GameImportRoute> {
+            GameImportScreen(onBack = { navController.popBackStack() })
         }
     }
 }

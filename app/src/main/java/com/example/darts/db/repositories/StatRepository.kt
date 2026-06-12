@@ -5,6 +5,7 @@ import com.example.darts.db.entities.PlayerCareerStats
 import com.example.darts.db.entities.PlayerLegStats
 import com.example.darts.viewModel.states.PlayerStateX01
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -33,6 +34,13 @@ class StatRepository @Inject constructor(
 
     suspend fun getMatchStats(gameId: Int): List<PlayerLegStats> =
         statDao.getAllLegStatsForGame(gameId)
+
+    /**
+     * All legs for a player in chronological order.
+     * Emits on every new leg completion — ideal for a live trend chart.
+     */
+    fun observeLegStatsForPlayer(playerId: Int): Flow<List<PlayerLegStats>> =
+        statDao.observeLegStatsForPlayer(playerId)
 
     // ── Career stats ──────────────────────────────────────────────────────
 
