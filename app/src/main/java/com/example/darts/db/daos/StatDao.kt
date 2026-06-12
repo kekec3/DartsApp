@@ -1,6 +1,7 @@
 package com.example.darts.db.dao
 
 import androidx.room.*
+import com.example.darts.db.entities.Participate
 import com.example.darts.db.entities.PlayerCareerStats
 import com.example.darts.db.entities.PlayerLegStats
 import kotlinx.coroutines.flow.Flow
@@ -55,4 +56,7 @@ abstract class StatDao {
         val existing = getCareerStats(playerId) ?: PlayerCareerStats(playerId = playerId)
         insertOrReplaceCareerStats(update(existing))
     }
+
+    @Query("SELECT * FROM player_leg_stats WHERE gameId IN (:gameIds)")
+    abstract suspend fun getLegStatsForGames(gameIds: List<Int>): List<PlayerLegStats>
 }

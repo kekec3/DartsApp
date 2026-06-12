@@ -10,6 +10,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navDeepLink
 import androidx.navigation.toRoute
 import com.example.darts.ui.GameScreen
 import com.example.darts.ui.screens.*
@@ -32,7 +33,7 @@ fun DartsNavGraph(
         composable<HomeRoute> {
             HomeScreen(
                 onViewBattles = { navController.navigate(BattlesRoute) },
-                onViewMoments = {navController.navigate(MomentsGalleryRoute)},
+                onViewMoments = { navController.navigate(MomentsGalleryRoute) },
                 onViewPlayers = { navController.navigate(PlayersRoute(isSelection = false)) },
                 onViewStats = { navController.navigate(StatsRoute) }
             )
@@ -67,7 +68,6 @@ fun DartsNavGraph(
         // 4. Player Stats
         composable<PlayerStatsRoute> { backStackEntry ->
             val args: PlayerStatsRoute = backStackEntry.toRoute()
-
             PlayerStatsScreen(
                 playerId = args.playerId,
                 playerName = args.playerName,
@@ -183,7 +183,6 @@ fun DartsNavGraph(
                 viewModel = viewModel,
                 gameId = args.gameId,
                 onLegSummary = { gameId, legNumber ->
-
                     viewModel.consumeNavigationEvent()
                     navController.navigate(
                         LegSummaryRoute(
@@ -193,7 +192,6 @@ fun DartsNavGraph(
                     )
                 },
                 onMatchSummary = { gameId ->
-
                     viewModel.consumeNavigationEvent()
                     navController.navigate(
                         MatchSummaryRoute(gameId)
@@ -205,7 +203,6 @@ fun DartsNavGraph(
         // 8. Summaries
         composable<LegSummaryRoute> { backStackEntry ->
             val args: LegSummaryRoute = backStackEntry.toRoute()
-
             LegSummaryScreen(
                 gameId = args.gameId,
                 legNumber = args.legNumber,
@@ -216,7 +213,6 @@ fun DartsNavGraph(
 
         composable<MatchSummaryRoute> { backStackEntry ->
             val args: MatchSummaryRoute = backStackEntry.toRoute()
-
             MatchSummaryScreen(
                 gameId = args.gameId,
                 onBack = { navController.popBackStack() },
@@ -256,22 +252,20 @@ fun DartsNavGraph(
             )
         }
 
-        // 13. Turn History
-        /*composable<TurnHistoryRoute> {
-            TurnHistoryScreen(
-                onBack = { navController.popBackStack() }
-            )
-        }*/
-
-        // 14. Game Sharing Screen
+        // 13. Game Sharing Screen
         composable<GameSharingRoute> {
             GameSharingScreen(
+                viewModel = hiltViewModel(), // Injects the custom export sharing viewModel setup
                 onBack = { navController.popBackStack() }
             )
         }
 
-        // 15. Game Import Screen
-        composable<GameImportRoute> {
+        // 14. Game Import Screen with explicit type-safe Deep Linking registration
+        composable<GameImportRoute>(
+            deepLinks = listOf(
+                navDeepLink { uriPattern = "https://example.com/darts/import" }
+            )
+        ) {
             GameImportScreen(
                 onBack = { navController.popBackStack() }
             )

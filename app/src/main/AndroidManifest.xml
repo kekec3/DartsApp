@@ -2,7 +2,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- 1. Add Permissions here (Required for maps to work) -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
@@ -13,7 +12,6 @@
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
 
-    <!-- Queries block to allow binding to the Speech Recognition Service on Android 11+ -->
     <queries>
         <intent>
             <action android:name="android.speech.RecognitionService" />
@@ -31,8 +29,6 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Darts">
 
-        <!-- 2. ADD THIS TAG HERE -->
-        <!-- Replace 'YOUR_ACTUAL_API_KEY_STRING' with the key from Google Cloud Console -->
         <meta-data
             android:name="com.google.android.geo.API_KEY"
             android:value="AIzaSyDC5LOcfKGUBY8QE2yKnzQy5mo-7UYWJK4" />
@@ -46,7 +42,18 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data android:scheme="https" />
+                <data android:host="example.com" />
+                <data android:pathPrefix="/darts/import" />
+            </intent-filter>
         </activity>
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.provider"

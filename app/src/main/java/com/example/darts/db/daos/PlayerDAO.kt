@@ -18,4 +18,6 @@ interface PlayerDAO {
 
     @Query("SELECT * FROM players WHERE idPlayer = :playerId")
     suspend fun getPlayerById(playerId: Int): Player?
+
+
 }
