@@ -14,21 +14,27 @@ class PlayerStatsViewModel @Inject constructor(
     private val statRepository: StatRepository
 ) : ViewModel() {
 
-    private val _careerStats =
-        MutableStateFlow<PlayerCareerStats?>(null)
+    private val _careerStats = MutableStateFlow<PlayerCareerStats?>(null)
+    val careerStats = _careerStats.asStateFlow()
 
-    val careerStats =
-        _careerStats.asStateFlow()
+    /**
+     * Per-leg 3-dart averages in chronological order (oldest → newest).
+     * Drives the trend line chart. Updated live as new legs are recorded.
+     */
+    private val _legTrend = MutableStateFlow<List<Float>>(emptyList())
+    val legTrend = _legTrend.asStateFlow()
 
     fun load(playerId: Int) {
-
         viewModelScope.launch {
-
             statRepository
                 .observeCareerStats(playerId)
-                .collect {
-                    _careerStats.value = it
-                }
+                .collect { _careerStats.value = it }
+        }
+
+        viewModelScope.launch {
+            statRepository
+                .observeLegStatsForPlayer(playerId)
+                .collect { legs -> _legTrend.value = legs.map { it.average } }
         }
     }
 }
