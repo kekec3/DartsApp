@@ -10,6 +10,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navDeepLink
 import androidx.navigation.toRoute
 import com.example.darts.ui.GameScreen
 import com.example.darts.ui.screens.*
@@ -69,8 +70,8 @@ fun DartsNavGraph(
         // 4. Player Stats  ← now uses StatisticsOverviewScreen
         composable<PlayerStatsRoute> { backStackEntry ->
             val args: PlayerStatsRoute = backStackEntry.toRoute()
-            StatisticsOverviewScreen(
-                playerId   = args.playerId,
+            PlayerStatsScreen(
+                playerId = args.playerId,
                 playerName = args.playerName,
                 onBack     = { navController.popBackStack() }
             )

@@ -19,6 +19,7 @@ import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.example.darts.ui.navigation.BattlesRoute
+import com.example.darts.ui.navigation.GameSharingRoute
 import com.example.darts.ui.navigation.HomeRoute
 import com.example.darts.ui.navigation.PlayersRoute
 import com.example.darts.ui.navigation.StatsRoute
@@ -79,9 +80,9 @@ fun DartsBottomBar(navController: NavHostController) {
 
         // --- MORE/STATS ITEM ---
         NavigationBarItem(
-            selected = currentDestination?.hierarchy?.any { it.hasRoute<StatsRoute>() } == true,
+            selected = currentDestination?.hierarchy?.any { it.hasRoute<GameSharingRoute>() } == true,
             onClick = {
-                navController.navigate(StatsRoute) {
+                navController.navigate(GameSharingRoute) {
                     popUpTo(navController.graph.findStartDestination().id) { saveState = true }
                     launchSingleTop = true
                     restoreState = true
