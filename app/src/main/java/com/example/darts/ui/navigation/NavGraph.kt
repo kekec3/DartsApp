@@ -14,6 +14,7 @@ import androidx.navigation.navDeepLink
 import androidx.navigation.toRoute
 import com.example.darts.ui.GameScreen
 import com.example.darts.ui.screens.*
+import com.example.darts.ui.viewmodels.GameSharingViewModel
 import com.example.darts.viewModel.BaseGameViewModel
 import com.example.darts.viewModel.CricketConfig
 import com.example.darts.viewModel.GameViewModelCricket
@@ -227,7 +228,11 @@ fun DartsNavGraph(
 
         // 14. Game Sharing Screen
         composable<GameSharingRoute> {
-            GameSharingScreen(onBack = { navController.popBackStack() })
+            val gameSharingViewModel: GameSharingViewModel = hiltViewModel()
+            GameSharingScreen(
+                onBack = { navController.popBackStack() },
+                viewModel =gameSharingViewModel
+            )
         }
 
         // 15. Game Import Screen

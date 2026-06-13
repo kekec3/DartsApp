@@ -50,21 +50,24 @@ fun GameSharingScreen(
     // Helper launcher function to trigger native share actions
     val launchShareIntent = { uri: android.net.Uri, text: String, targetPackage: String? ->
         val intent = Intent(Intent.ACTION_SEND).apply {
-            type = "application/octet-stream" // Matches file type pattern
+            type = "application/octet-stream"
             putExtra(Intent.EXTRA_STREAM, uri)
             putExtra(Intent.EXTRA_TEXT, text)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             targetPackage?.let { setPackage(it) }
         }
-        context.startActivity(Intent.createChooser(intent, "Share Darts History"))
+        if (targetPackage != null) {
+            context.startActivity(intent) // Bypasses system picker directly to WhatsApp/Gmail
+        } else {
+            context.startActivity(Intent.createChooser(intent, "Share Darts History"))
+        }
     }
 
     // Observe sharing success triggers
     LaunchedEffect(uiState) {
         if (uiState is ShareUiState.Success) {
             val successState = uiState as ShareUiState.Success
-            // Trigger share and clear state
-            launchShareIntent(successState.fileUri, successState.shareText, null)
+            launchShareIntent(successState.fileUri, successState.shareText, successState.targetPackage)
             viewModel.resetUiState()
         }
     }
@@ -156,16 +159,16 @@ fun GameSharingScreen(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 ShareOptionItem("WhatsApp", Icons.Default.Send, Color(0xFF25D366)) {
-                    selectedPlayer?.let { viewModel.prepareExport(context, it) }
+                    selectedPlayer?.let { viewModel.prepareExport(context, it, "com.whatsapp") }
                 }
                 ShareOptionItem("Messages", Icons.Default.Share, Color(0xFF007AFF)) {
-                    selectedPlayer?.let { viewModel.prepareExport(context, it) }
+                    selectedPlayer?.let { viewModel.prepareExport(context, it, "com.google.android.apps.messaging") }
                 }
                 ShareOptionItem("Gmail", Icons.Default.Email, Color(0xFFEA4335)) {
-                    selectedPlayer?.let { viewModel.prepareExport(context, it) }
+                    selectedPlayer?.let { viewModel.prepareExport(context, it, "com.google.android.gm") }
                 }
                 ShareOptionItem("More", Icons.Default.MoreVert, Color(0xFF1E1E1E)) {
-                    selectedPlayer?.let { viewModel.prepareExport(context, it) }
+                    selectedPlayer?.let { viewModel.prepareExport(context, it, null) } // Opens system chooser
                 }
             }
 

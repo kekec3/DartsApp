@@ -6,8 +6,9 @@ import com.example.darts.db.entities.*
 import com.example.darts.dto.PlayerExportPayload
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.firstOrNull
+import javax.inject.Inject
 
-class DartsExportRepository(
+class DartsExportRepository @Inject constructor(
     private val playerDao: PlayerDAO,
     private val battleDao: BattleDAO,
     private val gameDao: GameDAO,

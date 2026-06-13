@@ -8,18 +8,25 @@ import androidx.lifecycle.viewModelScope
 import com.example.darts.db.entities.Player
 import com.example.darts.repository.DartsExportRepository
 import com.google.gson.Gson
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.io.File
+import javax.inject.Inject
 
 sealed interface ShareUiState {
     object Idle : ShareUiState
     object Loading : ShareUiState
-    data class Success(val fileUri: Uri, val shareText: String) : ShareUiState
+    // Add targetPackage here (null means show generic system chooser)
+    data class Success(
+        val fileUri: Uri,
+        val shareText: String,
+        val targetPackage: String?
+    ) : ShareUiState
     data class Error(val message: String) : ShareUiState
 }
-
-class GameSharingViewModel(
+@HiltViewModel
+class GameSharingViewModel @Inject constructor(
     private val repository: DartsExportRepository
 ) : ViewModel() {
 
@@ -29,28 +36,29 @@ class GameSharingViewModel(
     private val _uiState = MutableStateFlow<ShareUiState>(ShareUiState.Idle)
     val uiState: StateFlow<ShareUiState> = _uiState.asStateFlow()
 
-    fun prepareExport(context: Context, player: Player) {
+    fun prepareExport(context: Context, player: Player, targetPackage: String? = null) {
         viewModelScope.launch {
             _uiState.value = ShareUiState.Loading
             try {
                 val payload = repository.getExportPayloadForPlayer(player.idPlayer)
-
-                // Serialize to JSON
                 val jsonString = Gson().toJson(payload)
 
-                // Write to cache directory with custom extension
                 val fileName = "${player.username.replace(" ", "_")}_history.darts"
                 val cacheFile = File(context.cacheDir, fileName)
                 cacheFile.writeText(jsonString)
 
-                // Generate safe share URI matching your FileProvider authority
                 val authority = "${context.packageName}.fileprovider"
                 val uri = FileProvider.getUriForFile(context, authority, cacheFile)
 
                 val deepLinkMessage = "Check out my darts match history! Open it inside the app here: " +
                         "https://example.com/darts/import (Or import the attached file!)"
 
-                _uiState.value = ShareUiState.Success(fileUri = uri, shareText = deepLinkMessage)
+                // Pass the target package along to the success state
+                _uiState.value = ShareUiState.Success(
+                    fileUri = uri,
+                    shareText = deepLinkMessage,
+                    targetPackage = targetPackage
+                )
             } catch (e: Exception) {
                 _uiState.value = ShareUiState.Error(e.localizedMessage ?: "Failed to export data")
             }

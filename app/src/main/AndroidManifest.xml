@@ -16,6 +16,10 @@
         <intent>
             <action android:name="android.speech.RecognitionService" />
         </intent>
+        <!-- App visibility requirements for targeted direct sharing -->
+        <package android:name="com.whatsapp" />
+        <package android:name="com.google.android.apps.messaging" />
+        <package android:name="com.google.android.gm" />
     </queries>
 
     <application
@@ -54,9 +58,10 @@
             </intent-filter>
         </activity>
 
+        <!-- Fixed authority to match your ViewModel string: "${context.packageName}.fileprovider" -->
         <provider
             android:name="androidx.core.content.FileProvider"
-            android:authorities="${applicationId}.provider"
+            android:authorities="${applicationId}.fileprovider"
             android:exported="false"
             android:grantUriPermissions="true">
             <meta-data
