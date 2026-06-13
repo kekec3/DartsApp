@@ -22,7 +22,8 @@ import androidx.compose.ui.unit.sp
 @Composable
 fun SettingsScreen(
     modifier: Modifier = Modifier,
-    onBack: () -> Unit = {}
+    onBack: () -> Unit = {},
+    onImportData:() -> Unit
 ) {
     var darkMode by remember { mutableStateOf(true) }
     var soundEffects by remember { mutableStateOf(true) }
@@ -78,7 +79,7 @@ fun SettingsScreen(
 
             // --- ACCOUNT & ABOUT ---
             SettingsCategoryLabel("SYSTEM")
-            SettingsPlainRow("Export Data", "CSV / JSON")
+            SettingsPlainRow("Import Data", "CSV / JSON", onImportData)
             SettingsPlainRow("Version", "1.0.0")
 
             Spacer(modifier = Modifier.height(40.dp))
@@ -98,12 +99,12 @@ fun SettingsCategoryLabel(label: String) {
 }
 
 @Composable
-fun SettingsPlainRow(label: String, value: String) {
+fun SettingsPlainRow(label: String, value: String, onClick: ()->Unit = {}) {
     Column {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable { /* Handle Setting Navigation */ }
+                .clickable { onClick() }
                 .padding(vertical = 18.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically

@@ -1,8 +1,11 @@
 package com.example.darts.ui.viewmodels
 
+import android.content.ContentValues
 import android.content.Context
 import android.net.Uri
-import androidx.core.content.FileProvider
+import android.os.Build
+import android.os.Environment
+import android.provider.MediaStore
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.darts.db.entities.Player
@@ -17,14 +20,15 @@ import javax.inject.Inject
 sealed interface ShareUiState {
     object Idle : ShareUiState
     object Loading : ShareUiState
-    // Add targetPackage here (null means show generic system chooser)
     data class Success(
         val fileUri: Uri,
         val shareText: String,
-        val targetPackage: String?
+        val targetPackage: String?,
+        val isSavedToDisk: Boolean = false
     ) : ShareUiState
     data class Error(val message: String) : ShareUiState
 }
+
 @HiltViewModel
 class GameSharingViewModel @Inject constructor(
     private val repository: DartsExportRepository
@@ -35,6 +39,49 @@ class GameSharingViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow<ShareUiState>(ShareUiState.Idle)
     val uiState: StateFlow<ShareUiState> = _uiState.asStateFlow()
+
+    fun exportToPublicDownloads(context: Context, player: Player) {
+        viewModelScope.launch {
+            _uiState.value = ShareUiState.Loading
+            try {
+                val payload = repository.getExportPayloadForPlayer(player.idPlayer)
+                val jsonString = Gson().toJson(payload)
+                val fileName = "${player.username.replace(" ", "_")}_history.darts"
+
+                val resolver = context.contentResolver
+
+                val contentValues = ContentValues().apply {
+                    put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
+                    put(MediaStore.MediaColumns.MIME_TYPE, "application/octet-stream")
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                        put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
+                    }
+                }
+
+                val collectionUri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    MediaStore.Downloads.EXTERNAL_CONTENT_URI
+                } else {
+                    Uri.fromFile(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS))
+                }
+
+                val fileUri = resolver.insert(collectionUri, contentValues)
+                    ?: throw Exception("Failed to open the standard Downloads repository slot")
+
+                resolver.openOutputStream(fileUri)?.use { outputStream ->
+                    outputStream.write(jsonString.toByteArray())
+                }
+
+                _uiState.value = ShareUiState.Success(
+                    fileUri = fileUri,
+                    shareText = "Exported file directly to local disk space!",
+                    targetPackage = null,
+                    isSavedToDisk = true
+                )
+            } catch (e: Exception) {
+                _uiState.value = ShareUiState.Error(e.localizedMessage ?: "Failed to save file disk backup")
+            }
+        }
+    }
 
     fun prepareExport(context: Context, player: Player, targetPackage: String? = null) {
         viewModelScope.launch {
@@ -48,16 +95,16 @@ class GameSharingViewModel @Inject constructor(
                 cacheFile.writeText(jsonString)
 
                 val authority = "${context.packageName}.fileprovider"
-                val uri = FileProvider.getUriForFile(context, authority, cacheFile)
+                val uri = androidx.core.content.FileProvider.getUriForFile(context, authority, cacheFile)
 
                 val deepLinkMessage = "Check out my darts match history! Open it inside the app here: " +
-                        "https://example.com/darts/import (Or import the attached file!)"
+                        "https://example.com/darts/import"
 
-                // Pass the target package along to the success state
                 _uiState.value = ShareUiState.Success(
                     fileUri = uri,
                     shareText = deepLinkMessage,
-                    targetPackage = targetPackage
+                    targetPackage = targetPackage,
+                    isSavedToDisk = false
                 )
             } catch (e: Exception) {
                 _uiState.value = ShareUiState.Error(e.localizedMessage ?: "Failed to export data")

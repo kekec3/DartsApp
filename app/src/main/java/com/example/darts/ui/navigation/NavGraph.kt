@@ -36,7 +36,8 @@ fun DartsNavGraph(
                 onViewBattles = { navController.navigate(BattlesRoute) },
                 onViewMoments = { navController.navigate(MomentsGalleryRoute) },
                 onViewPlayers = { navController.navigate(PlayersRoute(isSelection = false)) },
-                onViewStats = { navController.navigate(StatsRoute) }
+                onViewStats = { navController.navigate(StatsRoute) },
+                onViewSettings = {navController.navigate(SettingsRoute)}
             )
         }
 
@@ -218,7 +219,12 @@ fun DartsNavGraph(
 
         // 12. Settings Screen
         composable<SettingsRoute> {
-            SettingsScreen(onBack = { navController.popBackStack() })
+            SettingsScreen(
+                onBack = {
+                    navController.popBackStack()
+                },
+                onImportData = { navController.navigate(GameImportRoute) }
+            )
         }
 
         // 13. Turn History
@@ -237,7 +243,16 @@ fun DartsNavGraph(
 
         // 15. Game Import Screen
         composable<GameImportRoute> {
-            GameImportScreen(onBack = { navController.popBackStack() })
+            val sharingViewModel: GameSharingViewModel = hiltViewModel()
+
+            GameImportScreen(
+                onBack = {
+                    navController.popBackStack()
+                },
+                onImportConfirmed = { jsonPayload ->
+                    navController.popBackStack()
+                }
+            )
         }
     }
 }
