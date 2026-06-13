@@ -1,17 +1,20 @@
-package com.example.darts.ui.viewmodels
+package com.example.darts.viewModel
 
 import android.content.ContentValues
 import android.content.Context
+import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
+import androidx.annotation.RequiresApi
+import androidx.core.content.FileProvider
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.darts.db.entities.Player
 import com.example.darts.repository.DartsExportRepository
-import com.google.gson.Gson
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.io.File
@@ -20,13 +23,17 @@ import javax.inject.Inject
 sealed interface ShareUiState {
     object Idle : ShareUiState
     object Loading : ShareUiState
-    data class Success(
-        val fileUri: Uri,
-        val shareText: String,
-        val targetPackage: String?,
-        val isSavedToDisk: Boolean = false
-    ) : ShareUiState
     data class Error(val message: String) : ShareUiState
+}
+
+data class ShareScreenState(
+    val qrPayload: String? = null,
+    val isGeneratingQr: Boolean = false
+)
+
+sealed interface ShareUiEvent {
+    data class ShowToast(val message: String) : ShareUiEvent
+    data class LaunchSystemIntent(val intent: Intent) : ShareUiEvent
 }
 
 @HiltViewModel
@@ -34,85 +41,176 @@ class GameSharingViewModel @Inject constructor(
     private val repository: DartsExportRepository
 ) : ViewModel() {
 
-    val players: StateFlow<List<Player>> = repository.getAllPlayers()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    val players: StateFlow<List<Player>> =
+        repository.getAllPlayers()
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private val _uiState = MutableStateFlow<ShareUiState>(ShareUiState.Idle)
-    val uiState: StateFlow<ShareUiState> = _uiState.asStateFlow()
+    val uiState = _uiState.asStateFlow()
 
+    private val _screenState = MutableStateFlow(ShareScreenState())
+    val screenState = _screenState.asStateFlow()
+
+    private val _uiEvents = Channel<ShareUiEvent>(Channel.BUFFERED)
+    val uiEvents = _uiEvents.receiveAsFlow()
+
+    // -------------------------------------------------------
+    // QR GENERATION (NOW CONSISTENT WITH FILE FORMAT)
+    // -------------------------------------------------------
+    fun generateQrPayload(player: Player) {
+        viewModelScope.launch {
+            _screenState.update { it.copy(isGeneratingQr = true) }
+
+            try {
+                val qrPayload = repository.exportPlayerToQrString(player.idPlayer)
+
+                _screenState.update {
+                    it.copy(
+                        qrPayload = qrPayload,
+                        isGeneratingQr = false
+                    )
+                }
+
+            } catch (e: Exception) {
+                _screenState.update { it.copy(isGeneratingQr = false) }
+
+                _uiEvents.send(
+                    ShareUiEvent.ShowToast(
+                        e.localizedMessage ?: "QR generation failed"
+                    )
+                )
+            }
+        }
+    }
+
+    // -------------------------------------------------------
+    // DOWNLOAD .darts FILE (FIXED MIME + EXTENSION)
+    // -------------------------------------------------------
+    @RequiresApi(Build.VERSION_CODES.Q)
     fun exportToPublicDownloads(context: Context, player: Player) {
         viewModelScope.launch {
             _uiState.value = ShareUiState.Loading
+
             try {
-                val payload = repository.getExportPayloadForPlayer(player.idPlayer)
-                val jsonString = Gson().toJson(payload)
-                val fileName = "${player.username.replace(" ", "_")}_history.darts"
+                val payload = repository.exportPlayerToQrString(player.idPlayer)
+
+                val fileName = "${player.username}_history.darts"
 
                 val resolver = context.contentResolver
 
-                val contentValues = ContentValues().apply {
+                val values = ContentValues().apply {
                     put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
-                    put(MediaStore.MediaColumns.MIME_TYPE, "application/octet-stream")
+                    put(MediaStore.MediaColumns.MIME_TYPE, "application/x-darts")
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                         put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
                     }
                 }
 
-                val collectionUri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    MediaStore.Downloads.EXTERNAL_CONTENT_URI
-                } else {
-                    Uri.fromFile(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS))
+                val uri = resolver.insert(
+                    MediaStore.Downloads.EXTERNAL_CONTENT_URI,
+                    values
+                ) ?: throw Exception("Failed to create file")
+
+                resolver.openOutputStream(uri)?.use {
+                    it.write(payload.toByteArray())
                 }
 
-                val fileUri = resolver.insert(collectionUri, contentValues)
-                    ?: throw Exception("Failed to open the standard Downloads repository slot")
+                _uiState.value = ShareUiState.Idle
 
-                resolver.openOutputStream(fileUri)?.use { outputStream ->
-                    outputStream.write(jsonString.toByteArray())
-                }
-
-                _uiState.value = ShareUiState.Success(
-                    fileUri = fileUri,
-                    shareText = "Exported file directly to local disk space!",
-                    targetPackage = null,
-                    isSavedToDisk = true
+                _uiEvents.send(
+                    ShareUiEvent.ShowToast("Export saved as .darts file")
                 )
+
             } catch (e: Exception) {
-                _uiState.value = ShareUiState.Error(e.localizedMessage ?: "Failed to save file disk backup")
+                _uiState.value = ShareUiState.Error(
+                    e.localizedMessage ?: "Export failed"
+                )
             }
         }
     }
 
-    fun prepareExport(context: Context, player: Player, targetPackage: String? = null) {
+    // -------------------------------------------------------
+    // WHATSAPP TEXT (NOW SAME PAYLOAD AS FILE + QR)
+    // -------------------------------------------------------
+    fun shareViaWhatsAppText(player: Player) {
+        viewModelScope.launch {
+            try {
+                val payload = repository.exportPlayerToQrString(player.idPlayer)
+
+                val intent = Intent(Intent.ACTION_SEND).apply {
+                    type = "text/plain"
+                    putExtra(Intent.EXTRA_TEXT, payload)
+                    setPackage("com.whatsapp")
+                }
+
+                _uiEvents.send(
+                    ShareUiEvent.LaunchSystemIntent(intent)
+                )
+
+            } catch (e: Exception) {
+                _uiEvents.send(
+                    ShareUiEvent.ShowToast(
+                        e.localizedMessage ?: "WhatsApp share failed"
+                    )
+                )
+            }
+        }
+    }
+
+    // -------------------------------------------------------
+    // FILE SHARE (FIXED MIME + FileProvider)
+    // -------------------------------------------------------
+    fun shareViaApplicationFile(
+        context: Context,
+        player: Player,
+        targetPackage: String? = null
+    ) {
         viewModelScope.launch {
             _uiState.value = ShareUiState.Loading
+
             try {
-                val payload = repository.getExportPayloadForPlayer(player.idPlayer)
-                val jsonString = Gson().toJson(payload)
+                val payload = repository.exportPlayerToQrString(player.idPlayer)
 
-                val fileName = "${player.username.replace(" ", "_")}_history.darts"
+                val fileName = "${player.username}_history.darts"
                 val cacheFile = File(context.cacheDir, fileName)
-                cacheFile.writeText(jsonString)
 
-                val authority = "${context.packageName}.fileprovider"
-                val uri = androidx.core.content.FileProvider.getUriForFile(context, authority, cacheFile)
+                cacheFile.writeText(payload)
 
-                val deepLinkMessage = "Check out my darts match history! Open it inside the app here: " +
-                        "https://example.com/darts/import"
-
-                _uiState.value = ShareUiState.Success(
-                    fileUri = uri,
-                    shareText = deepLinkMessage,
-                    targetPackage = targetPackage,
-                    isSavedToDisk = false
+                val uri = FileProvider.getUriForFile(
+                    context,
+                    "${context.packageName}.fileprovider",
+                    cacheFile
                 )
+
+                val intent = Intent(Intent.ACTION_SEND).apply {
+                    type = "application/x-darts"
+                    putExtra(Intent.EXTRA_STREAM, uri)
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    targetPackage?.let { setPackage(it) }
+                }
+
+                val finalIntent =
+                    targetPackage?.let { intent }
+                        ?: Intent.createChooser(intent, "Share Darts File")
+
+                _uiState.value = ShareUiState.Idle
+
+                _uiEvents.send(
+                    ShareUiEvent.LaunchSystemIntent(finalIntent)
+                )
+
             } catch (e: Exception) {
-                _uiState.value = ShareUiState.Error(e.localizedMessage ?: "Failed to export data")
+                _uiState.value = ShareUiState.Error(
+                    e.localizedMessage ?: "Share failed"
+                )
             }
         }
     }
 
-    fun resetUiState() {
-        _uiState.value = ShareUiState.Idle
+    // -------------------------------------------------------
+    // QR ACCESSOR
+    // -------------------------------------------------------
+    suspend fun getQrCodePayload(player: Player): String {
+        return repository.exportPlayerToQrString(player.idPlayer)
     }
 }

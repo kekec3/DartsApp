@@ -18,4 +18,7 @@ interface ParticipateDAO {
     // ADD THIS HELPER FOR EXPORT:
     @Query("SELECT * FROM participate WHERE idPlayer = :playerId")
     suspend fun getParticipationsByPlayerIdDirect(playerId: Int): List<Participate>
+
+    @Query("SELECT * FROM participate WHERE idBattle = :battleId")
+    suspend fun getParticipationsByBattleIdDirect(battleId: Int): List<Participate>
 }

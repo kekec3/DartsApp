@@ -1,7 +1,5 @@
 package com.example.darts.ui.screens
 
-import android.net.Uri
-import android.provider.OpenableColumns
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -21,26 +19,23 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.darts.viewModel.GameImportViewModel
+import com.example.darts.viewModel.ImportUiEvent
 import com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions
 import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
-import java.io.BufferedReader
-import java.io.InputStreamReader
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GameImportScreen(
     modifier: Modifier = Modifier,
-    onBack: () -> Unit,
-    onImportConfirmed: (String) -> Unit
+    viewModel: GameImportViewModel,
+    onBack: () -> Unit
 ) {
     val context = LocalContext.current
-
-    var selectedFileUri by remember { mutableStateOf<Uri?>(null) }
-    var selectedFileName by remember { mutableStateOf<String?>(null) }
-    var isQrImportDetected by remember { mutableStateOf(false) }
-    var parsedPayloadText by remember { mutableStateOf<String?>(null) }
+    val uiState by viewModel.uiState.collectAsState()
 
     val scanner = remember {
         val options = GmsBarcodeScannerOptions.Builder()
@@ -52,44 +47,53 @@ fun GameImportScreen(
 
     val filePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
-    ) { uri: Uri? ->
-        uri?.let {
-            selectedFileUri = it
-            isQrImportDetected = false
+    ) { uri ->
+        uri?.let { viewModel.processIncomingFileUri(context, it) }
+    }
 
-            context.contentResolver.query(it, null, null, null, null)?.use { cursor ->
-                val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
-                if (nameIndex != -1 && cursor.moveToFirst()) {
-                    selectedFileName = cursor.getString(nameIndex)
+    LaunchedEffect(Unit) {
+        viewModel.uiEvents.collect { event ->
+            when (event) {
+                is ImportUiEvent.OnImportCompletedSuccess -> {
+                    Toast.makeText(context, "Import successful", Toast.LENGTH_SHORT).show()
+                    onBack()
                 }
-            }
-
-            try {
-                context.contentResolver.openInputStream(it)?.use { inputStream ->
-                    BufferedReader(InputStreamReader(inputStream)).use { reader ->
-                        parsedPayloadText = reader.readText()
-                    }
+                is ImportUiEvent.ShowToast -> {
+                    Toast.makeText(context, event.msg, Toast.LENGTH_SHORT).show()
                 }
-            } catch (e: Exception) {
-                Toast.makeText(context, "Failed to read file payload data", Toast.LENGTH_SHORT).show()
             }
         }
     }
+
+    val hasData = uiState.parsedPayloadText != null
 
     Column(
         modifier = modifier
             .fillMaxSize()
             .background(Color.Black)
     ) {
+
         TopAppBar(
             title = {
-                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                    Text("Import Match Data", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = Color.White)
+                Box(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        "Import Match Data",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp,
+                        color = Color.White
+                    )
                 }
             },
             navigationIcon = {
                 IconButton(onClick = onBack) {
-                    Icon(Icons.Default.KeyboardArrowLeft, contentDescription = "Back", tint = Color.White)
+                    Icon(
+                        Icons.Default.KeyboardArrowLeft,
+                        contentDescription = "Back",
+                        tint = Color.White
+                    )
                 }
             },
             colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Black)
@@ -101,7 +105,11 @@ fun GameImportScreen(
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            if (selectedFileUri == null && !isQrImportDetected) {
+
+            // ─────────────────────────────────────────────
+            // INPUT STATE (NO DATA YET)
+            // ─────────────────────────────────────────────
+            if (!hasData) {
 
                 Box(
                     modifier = Modifier
@@ -116,58 +124,62 @@ fun GameImportScreen(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         modifier = Modifier.padding(24.dp)
                     ) {
+
                         Icon(
-                            imageVector = Icons.Default.QrCodeScanner,
-                            contentDescription = "Scanner",
+                            Icons.Default.QrCodeScanner,
+                            contentDescription = null,
                             tint = Color(0xFF76B947),
                             modifier = Modifier.size(56.dp)
                         )
-                        Spacer(modifier = Modifier.height(16.dp))
+
+                        Spacer(Modifier.height(16.dp))
+
                         Text(
-                            text = "Scan QR Sharing Code",
+                            "Scan or Import Match Data",
                             color = Color.White,
                             fontWeight = FontWeight.Bold,
                             fontSize = 16.sp
                         )
+
                         Text(
-                            text = "Instantly scan your opponent's QR generation screen layout over-the-air to synchronize match files.",
+                            "Use QR or file to import .darts match history",
                             color = Color.Gray,
                             fontSize = 12.sp,
-                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                            lineHeight = 18.sp,
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                            textAlign = TextAlign.Center
                         )
 
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(Modifier.height(16.dp))
 
                         Button(
                             onClick = {
                                 scanner.startScan()
                                     .addOnSuccessListener { barcode ->
-                                        barcode.rawValue?.let { qrValue ->
-                                            parsedPayloadText = qrValue
-                                            isQrImportDetected = true
-                                            selectedFileUri = null
+                                        barcode.rawValue?.let {
+                                            viewModel.processQrCodeScanResult(it)
                                         }
                                     }
-                                    .addOnFailureListener { e ->
-                                        Toast.makeText(context, "Scan cancelled or failed", Toast.LENGTH_SHORT).show()
+                                    .addOnFailureListener {
+                                        Toast.makeText(
+                                            context,
+                                            "Scan failed",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
                                     }
                             },
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF76B947))
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFF76B947)
+                            )
                         ) {
-                            Text("Open Live Camera Scanner", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                            Text("Scan QR", color = Color.Black)
                         }
                     }
                 }
 
-                Spacer(modifier = Modifier.height(24.dp))
-                Text("OR ALTERNATIVELY", color = Color.DarkGray, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(Modifier.height(20.dp))
 
                 Card(
                     onClick = { filePickerLauncher.launch("*/*") },
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1A)),
+                    colors = CardDefaults.cardColors(Color(0xFF1A1A1A)),
                     shape = RoundedCornerShape(16.dp),
                     modifier = Modifier
                         .fillMaxWidth()
@@ -176,95 +188,114 @@ fun GameImportScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(horizontal = 20.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Start
+                            .padding(20.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .size(48.dp)
-                                .background(Color(0xFF262626), RoundedCornerShape(12.dp)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(Icons.Default.FileDownload, contentDescription = null, tint = Color(0xFF76B947))
-                        }
-                        Spacer(modifier = Modifier.width(16.dp))
+                        Icon(
+                            Icons.Default.FileDownload,
+                            contentDescription = null,
+                            tint = Color(0xFF76B947)
+                        )
+
+                        Spacer(Modifier.width(16.dp))
+
                         Column {
-                            Text("Browse Device Files", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                            Text("Select a downloaded .darts record", color = Color.Gray, fontSize = 12.sp)
-                        }
-                    }
-                }
-
-            } else {
-                Text(
-                    text = "Match Preview Detected",
-                    color = Color.White,
-                    modifier = Modifier.fillMaxWidth(),
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 16.sp
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1A)),
-                    shape = RoundedCornerShape(16.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(modifier = Modifier.padding(20.dp)) {
-                        if (isQrImportDetected) {
-                            Text("Source: Wireless QR Dynamic Sync", color = Color(0xFF76B947), fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text("Payload Ready", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                            Text("Compressed configuration context extracted successfully.", color = Color.Gray, fontSize = 13.sp)
-                        } else {
-                            Text("Source: Local File System Storage", color = Color(0xFF007AFF), fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(selectedFileName ?: "Imported File", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                            Text("URI: ${selectedFileUri.toString().take(45)}...", color = Color.Gray, fontSize = 11.sp)
-                        }
-
-                        Spacer(modifier = Modifier.height(20.dp))
-                        HorizontalDivider(color = Color.DarkGray)
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        TextButton(
-                            onClick = {
-                                selectedFileUri = null
-                                selectedFileName = null
-                                isQrImportDetected = false
-                                parsedPayloadText = null
-                            },
-                            contentPadding = PaddingValues(0.dp)
-                        ) {
-                            Text("Clear and Reset Scanner", color = Color.Red, fontSize = 13.sp)
+                            Text(
+                                "Browse File",
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                ".darts or JSON export",
+                                color = Color.Gray,
+                                fontSize = 12.sp
+                            )
                         }
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.weight(1f))
+            // ─────────────────────────────────────────────
+            // PREVIEW STATE (DATA LOADED)
+            // ─────────────────────────────────────────────
+            else {
+
+                Text(
+                    "Ready to Import",
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp
+                )
+
+                Spacer(Modifier.height(16.dp))
+
+                Card(
+                    colors = CardDefaults.cardColors(Color(0xFF1A1A1A)),
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(Modifier.padding(20.dp)) {
+
+                        Text(
+                            text = uiState.selectedFileName ?: "QR Import",
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold
+                        )
+
+                        Spacer(Modifier.height(8.dp))
+
+                        Text(
+                            text = uiState.parsedPayloadText
+                                ?.take(120)
+                                ?: "No preview available",
+                            color = Color.Gray,
+                            fontSize = 12.sp
+                        )
+
+                        Spacer(Modifier.height(12.dp))
+
+                        TextButton(
+                            onClick = { viewModel.clearImportSelection() }
+                        ) {
+                            Text("Reset", color = Color.Red)
+                        }
+                    }
+                }
+            }
+
+            Spacer(Modifier.weight(1f))
+
+            // ─────────────────────────────────────────────
+            // ACTIONS
+            // ─────────────────────────────────────────────
+            if (uiState.isProcessing) {
+                CircularProgressIndicator(color = Color(0xFF76B947))
+                Spacer(Modifier.height(12.dp))
+            }
+
+            if (uiState.errorMessage != null) {
+                Text(
+                    uiState.errorMessage!!,
+                    color = Color.Red,
+                    fontSize = 12.sp
+                )
+                Spacer(Modifier.height(8.dp))
+            }
 
             Button(
-                onClick = {
-                    parsedPayloadText?.let { onImportConfirmed(it) }
-                },
-                enabled = parsedPayloadText != null,
+                onClick = { viewModel.executeImportConfirmation() },
+                enabled = hasData && !uiState.isProcessing,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(60.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = Color(0xFF76B947),
-                    disabledConttainerColor = Color.DarkGray
-                ),
-                shape = RoundedCornerShape(12.dp)
+                    disabledContainerColor = Color.DarkGray
+                )
             ) {
                 Text(
                     "CONFIRM IMPORT",
-                    color = if (parsedPayloadText != null) Color.Black else Color.Gray,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 0.5.sp
+                    color = if (hasData) Color.Black else Color.Gray
                 )
             }
         }
