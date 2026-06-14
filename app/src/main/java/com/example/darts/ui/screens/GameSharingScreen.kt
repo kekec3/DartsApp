@@ -1,6 +1,8 @@
 package com.example.darts.ui.screens
 
-import android.content.Intent
+import android.graphics.Bitmap
+import android.widget.Toast
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -18,20 +20,28 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.darts.db.entities.Player
-import com.example.darts.ui.viewmodels.GameSharingViewModel
-import com.example.darts.ui.viewmodels.ShareUiState
+import com.example.darts.viewModel.GameSharingViewModel
+import com.example.darts.viewModel.ShareUiEvent
+import com.example.darts.viewModel.ShareUiState
+import com.google.zxing.BarcodeFormat
+import com.google.zxing.EncodeHintType
+import com.google.zxing.qrcode.QRCodeWriter
+import java.util.Hashtable
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -47,25 +57,15 @@ fun GameSharingScreen(
     var selectedPlayer by remember { mutableStateOf<Player?>(null) }
     var isDropdownExpanded by remember { mutableStateOf(false) }
 
-    // Helper launcher function to trigger native share actions
-    val launchShareIntent = { uri: android.net.Uri, text: String, targetPackage: String? ->
-        val intent = Intent(Intent.ACTION_SEND).apply {
-            type = "application/octet-stream" // Matches file type pattern
-            putExtra(Intent.EXTRA_STREAM, uri)
-            putExtra(Intent.EXTRA_TEXT, text)
-            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            targetPackage?.let { setPackage(it) }
-        }
-        context.startActivity(Intent.createChooser(intent, "Share Darts History"))
-    }
+    LaunchedEffect(Unit) {
+        viewModel.uiEvents.collect { event ->
+            when (event) {
+                is ShareUiEvent.ShowToast ->
+                    Toast.makeText(context, event.message, Toast.LENGTH_LONG).show()
 
-    // Observe sharing success triggers
-    LaunchedEffect(uiState) {
-        if (uiState is ShareUiState.Success) {
-            val successState = uiState as ShareUiState.Success
-            // Trigger share and clear state
-            launchShareIntent(successState.fileUri, successState.shareText, null)
-            viewModel.resetUiState()
+                is ShareUiEvent.LaunchSystemIntent ->
+                    context.startActivity(event.intent)
+            }
         }
     }
 
@@ -74,15 +74,28 @@ fun GameSharingScreen(
             .fillMaxSize()
             .background(Color.Black)
     ) {
+
         TopAppBar(
             title = {
-                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                    Text("Export Player History", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = Color.White)
+                Box(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        "Export Player History",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp,
+                        color = Color.White
+                    )
                 }
             },
             navigationIcon = {
                 IconButton(onClick = onBack) {
-                    Icon(Icons.Default.KeyboardArrowLeft, contentDescription = "Back", tint = Color.White)
+                    Icon(
+                        Icons.Default.KeyboardArrowLeft,
+                        contentDescription = "Back",
+                        tint = Color.White
+                    )
                 }
             },
             colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Black)
@@ -93,10 +106,10 @@ fun GameSharingScreen(
                 .fillMaxSize()
                 .padding(20.dp)
         ) {
-            // Player Selection Box Dropdown
-            Text("Select Player to Export", color = Color.Gray, fontSize = 14.sp)
-            Spacer(modifier = Modifier.height(8.dp))
 
+            // ─────────────────────────────
+            // PLAYER SELECT
+            // ─────────────────────────────
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -105,19 +118,17 @@ fun GameSharingScreen(
                     .padding(16.dp)
             ) {
                 Text(
-                    text = selectedPlayer?.username ?: "Tap to choose a player...",
-                    color = if (selectedPlayer != null) Color.White else Color.DarkGray,
-                    fontSize = 16.sp
+                    text = selectedPlayer?.username ?: "Select player",
+                    color = if (selectedPlayer != null) Color.White else Color.DarkGray
                 )
 
                 DropdownMenu(
                     expanded = isDropdownExpanded,
-                    onDismissRequest = { isDropdownExpanded = false },
-                    modifier = Modifier.background(Color(0xFF1A1A1A))
+                    onDismissRequest = { isDropdownExpanded = false }
                 ) {
                     players.forEach { player ->
                         DropdownMenuItem(
-                            text = { Text(player.username, color = Color.White) },
+                            text = { Text(player.username) },
                             onClick = {
                                 selectedPlayer = player
                                 isDropdownExpanded = false
@@ -127,74 +138,106 @@ fun GameSharingScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(Modifier.height(24.dp))
 
-            // Match Summary Card Preview
+            // ─────────────────────────────
+            // EXPORT PREVIEW
+            // ─────────────────────────────
             selectedPlayer?.let { player ->
+
+                val qrPayloadState = produceState<String?>(null, player.idPlayer) {
+                    value = viewModel.getQrCodePayload(player)
+                }
+
                 Card(
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1A)),
+                    colors = CardDefaults.cardColors(Color(0xFF1A1A1A)),
                     shape = RoundedCornerShape(16.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Column(modifier = Modifier.padding(20.dp)) {
-                        Text(player.username, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                        Text("Ready to package all associated battles & metrics", color = Color.Gray, fontSize = 14.sp)
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Text(".darts Export File", color = Color(0xFF76B947), fontSize = 16.sp, fontWeight = FontWeight.Black)
+                    Column(
+                        Modifier.padding(20.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+
+                        Text(
+                            player.username,
+                            color = Color.White,
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+
+                        Spacer(Modifier.height(12.dp))
+
+                        Text(
+                            "QR Export Payload",
+                            color = Color(0xFF76B947),
+                            fontSize = 12.sp
+                        )
+
+                        Spacer(Modifier.height(8.dp))
+
+                        qrPayloadState.value?.let { qr ->
+                            QRGeneratorContainer(textToEncode = qr)
+                        }
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(Modifier.height(24.dp))
 
-            // Share Actions Panel
-            Text("Share via Link & File", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-            Spacer(modifier = Modifier.height(20.dp))
+            // ─────────────────────────────
+            // SHARE OPTIONS
+            // ─────────────────────────────
+            Text(
+                "Share",
+                color = Color.White,
+                fontWeight = FontWeight.Bold
+            )
+
+            Spacer(Modifier.height(12.dp))
 
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier.fillMaxWidth()
             ) {
-                ShareOptionItem("WhatsApp", Icons.Default.Send, Color(0xFF25D366)) {
-                    selectedPlayer?.let { viewModel.prepareExport(context, it) }
+
+                ShareOptionItem("WA File", Icons.Default.Share, Color(0xFF075E54)) {
+                    selectedPlayer?.let {
+                        viewModel.shareViaApplicationFile(context, it, "com.whatsapp")
+                    }
                 }
-                ShareOptionItem("Messages", Icons.Default.Share, Color(0xFF007AFF)) {
-                    selectedPlayer?.let { viewModel.prepareExport(context, it) }
-                }
+
                 ShareOptionItem("Gmail", Icons.Default.Email, Color(0xFFEA4335)) {
-                    selectedPlayer?.let { viewModel.prepareExport(context, it) }
+                    selectedPlayer?.let {
+                        viewModel.shareViaApplicationFile(context, it, "com.google.android.gm")
+                    }
                 }
-                ShareOptionItem("More", Icons.Default.MoreVert, Color(0xFF1E1E1E)) {
-                    selectedPlayer?.let { viewModel.prepareExport(context, it) }
+
+                ShareOptionItem("More", Icons.Default.MoreVert, Color.Gray) {
+                    selectedPlayer?.let {
+                        viewModel.shareViaApplicationFile(context, it, null)
+                    }
                 }
             }
 
-            Spacer(modifier = Modifier.weight(1f))
+            Spacer(Modifier.weight(1f))
 
-            if (uiState is ShareUiState.Loading) {
-                CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally), color = Color(0xFF76B947))
-                Spacer(modifier = Modifier.height(16.dp))
-            }
-
-            // Export Confirmation Button
+            // ─────────────────────────────
+            // DOWNLOAD
+            // ─────────────────────────────
             Button(
-                onClick = { selectedPlayer?.let { viewModel.prepareExport(context, it) } },
+                onClick = {
+                    selectedPlayer?.let {
+                        viewModel.exportToPublicDownloads(context, it)
+                    }
+                },
                 enabled = selectedPlayer != null && uiState !is ShareUiState.Loading,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(60.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFF76B947),
-                    disabledContainerColor = Color.DarkGray
-                ),
-                shape = RoundedCornerShape(12.dp)
+                colors = ButtonDefaults.buttonColors(Color(0xFF76B947))
             ) {
-                Text(
-                    "PREPARE AND SHARE ALL DATA",
-                    color = if (selectedPlayer != null) Color.Black else Color.Gray,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 0.5.sp
-                )
+                Text("EXPORT TO DOWNLOADS", color = Color.Black)
             }
         }
     }
@@ -217,5 +260,64 @@ fun ShareOptionItem(label: String, icon: ImageVector, bgColor: Color, onClick: (
         }
         Spacer(modifier = Modifier.height(8.dp))
         Text(label, color = Color.Gray, fontSize = 11.sp)
+    }
+}
+
+@Composable
+fun QRGeneratorContainer(textToEncode: String) {
+    Box(
+        modifier = Modifier
+            .size(160.dp)
+            .background(Color.White, RoundedCornerShape(12.dp))
+            .padding(8.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        QRVisualizerWidget(text = textToEncode)
+    }
+}
+
+@Composable
+fun QRVisualizerWidget(text: String, modifier: Modifier = Modifier) {
+    val qrBitmap = remember(text) {
+        generateQrCodeBitmap(text, 512, 512)
+    }
+
+    qrBitmap?.let { bitmap ->
+        Image(
+            painter = BitmapPainter(bitmap.asImageBitmap()),
+            contentDescription = "QR Code Payload",
+            modifier = modifier.size(140.dp)
+        )
+    }
+}
+
+private fun generateQrCodeBitmap(content: String, width: Int, height: Int): Bitmap? {
+    return try {
+        val hints = Hashtable<EncodeHintType, Any>().apply {
+            put(EncodeHintType.MARGIN, 1)
+        }
+
+        val bitMatrix = QRCodeWriter().encode(
+            content,
+            BarcodeFormat.QR_CODE,
+            width,
+            height,
+            hints
+        )
+
+        val pixels = IntArray(width * height)
+        for (y in 0 until height) {
+            val offset = y * width
+            for (x in 0 until width) {
+                pixels[offset + x] = if (bitMatrix.get(x, y)) 0xFF000000.toInt() else 0xFFFFFFFF.toInt()
+            }
+        }
+
+        Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888).apply {
+            setPixels(pixels, 0, width, 0, 0, width, height)
+        }
+    } catch (e: Exception) {
+        e.printStackTrace()
+        null
     }
 }
