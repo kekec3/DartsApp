@@ -228,6 +228,8 @@ class GameViewModelX01 @Inject constructor(
             )
 
             if (newState.isFinished) {
+                gameRepository.markGameFinished(gameId)
+
                 _navigationEvents.emit(GameNavigationEvent.MatchSummary(gameId))
             } else {
                 val showLegSummary = true

@@ -30,4 +30,12 @@ class GameRepository @Inject constructor(
     suspend fun updateGameLocation(gameId: Int, coords: String) {
         gameDAO.updateLocation(gameId, coords)
     }
+
+    suspend fun markGameFinished(gameId: Int) {
+        gameDAO.markFinished(gameId)
+    }
+
+    suspend fun cleanupUnfinishedGames() {
+        gameDAO.deleteUnfinishedGames()
+    }
 }
