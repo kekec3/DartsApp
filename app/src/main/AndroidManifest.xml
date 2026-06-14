@@ -17,7 +17,10 @@
         <intent>
             <action android:name="android.speech.RecognitionService" />
         </intent>
-        <!-- App visibility requirements for targeted direct sharing -->
+        <intent>
+            <action android:name="com.google.android.gms.vision.DEPENDENCY" />
+        </intent>
+
         <package android:name="com.whatsapp" />
         <package android:name="com.google.android.apps.messaging" />
         <package android:name="com.google.android.gm" />
@@ -33,6 +36,10 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.Darts">
+
+        <meta-data
+            android:name="com.google.mlkit.vision.DEPENDENCIES"
+            android:value="barcode_ui" />
 
         <meta-data
             android:name="com.google.android.geo.API_KEY"
@@ -73,7 +80,6 @@
             </intent-filter>
         </activity>
 
-        <!-- Fixed authority to match your ViewModel string: "${context.packageName}.fileprovider" -->
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"

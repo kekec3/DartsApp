@@ -92,7 +92,7 @@ class GameSharingViewModel @Inject constructor(
             _uiState.value = ShareUiState.Loading
 
             try {
-                val payload = repository.exportPlayerToQrString(player.idPlayer)
+                val payload = repository.exportPlayerToCompressedFileString(player.idPlayer)
 
                 val fileName = "${player.username}_history.darts"
 
@@ -169,8 +169,7 @@ class GameSharingViewModel @Inject constructor(
             _uiState.value = ShareUiState.Loading
 
             try {
-                val payload = repository.exportPlayerToQrString(player.idPlayer)
-
+                val payload = repository.exportPlayerToCompressedFileString(player.idPlayer)
                 val fileName = "${player.username}_history.darts"
                 val cacheFile = File(context.cacheDir, fileName)
 

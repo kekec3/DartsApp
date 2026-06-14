@@ -1,5 +1,6 @@
 package com.example.darts.ui.screens
 
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -24,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.darts.viewModel.GameImportViewModel
 import com.example.darts.viewModel.ImportUiEvent
+import com.google.mlkit.common.MlKitException
 import com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions
 import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
 
@@ -37,7 +39,8 @@ fun GameImportScreen(
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
 
-    val scanner = remember {
+    // 1. Properly configured scanner client using remember
+    val scanner = remember(context) {
         val options = GmsBarcodeScannerOptions.Builder()
             .setBarcodeFormats(com.google.mlkit.vision.barcode.common.Barcode.FORMAT_QR_CODE)
             .enableAutoZoom()
@@ -152,18 +155,26 @@ fun GameImportScreen(
 
                         Button(
                             onClick = {
+                                // 2. Use the remembered scanner instance, not a new raw client
                                 scanner.startScan()
                                     .addOnSuccessListener { barcode ->
-                                        barcode.rawValue?.let {
-                                            viewModel.processQrCodeScanResult(it)
+                                        val rawValue = barcode.rawValue
+                                        if (!rawValue.isNullOrBlank()) {
+                                            // 3. Pass data back to your ViewModel so state updates!
+                                            viewModel.processIncomingFileUri(context, android.net.Uri.parse(rawValue))
+                                            // Note: If your VM accepts raw text instead of a Uri for QR,
+                                            // replace the line above with your explicit VM QR handler function.
                                         }
                                     }
-                                    .addOnFailureListener {
-                                        Toast.makeText(
-                                            context,
-                                            "Scan failed",
-                                            Toast.LENGTH_SHORT
-                                        ).show()
+                                    .addOnFailureListener { e ->
+                                        if (e is MlKitException) {
+                                            when (e.errorCode) {
+                                                13 -> Log.d("QR_SCAN", "User canceled the scan.")
+                                                else -> Log.e("QR_SCAN", "Scanner error: ${e.errorCode}", e)
+                                            }
+                                        } else {
+                                            Log.e("QR_SCAN", "Unknown error", e)
+                                        }
                                     }
                             },
                             colors = ButtonDefaults.buttonColors(
