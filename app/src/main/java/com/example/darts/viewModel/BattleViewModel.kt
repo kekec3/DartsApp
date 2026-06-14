@@ -16,6 +16,9 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+
+
+
 @HiltViewModel
 class BattleViewModel @Inject constructor(
     private val repository: BattleRepository
@@ -28,7 +31,7 @@ class BattleViewModel @Inject constructor(
 
     val allBattles: StateFlow<List<Battle>> = repository.getAllBattles().stateIn(
         scope = viewModelScope,
-        started = SharingStarted.Companion.WhileSubscribed(5000),
+        started = SharingStarted.WhileSubscribed(5000),
         initialValue = emptyList()
     )
 
@@ -39,7 +42,7 @@ class BattleViewModel @Inject constructor(
     val availablePlayers: StateFlow<List<Player>> = repository.getAllPlayers()
         .stateIn(
             scope = viewModelScope,
-            started = SharingStarted.Companion.WhileSubscribed(5000),
+            started = SharingStarted.WhileSubscribed(5000),
             initialValue = emptyList()
         )
 

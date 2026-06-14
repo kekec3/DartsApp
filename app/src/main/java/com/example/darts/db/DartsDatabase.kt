@@ -22,7 +22,7 @@ import com.example.darts.db.entities.PlayerCareerStats
 import com.example.darts.db.entities.PlayerLegStats
 
 @Database(entities = arrayOf(Player::class, Game::class, Participate::class, Moment::class, Battle::class,
-    PlayerLegStats::class, PlayerCareerStats::class), version = 5, exportSchema = false)
+    PlayerLegStats::class, PlayerCareerStats::class), version = 6, exportSchema = false)
 abstract class DartsDatabase: RoomDatabase() {
 
     abstract fun playerDao() : PlayerDAO
