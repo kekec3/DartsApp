@@ -1,5 +1,7 @@
 package com.example.darts.repository
 
+import android.content.Context
+import android.net.Uri
 import android.util.Base64
 import com.example.darts.db.dao.StatDao
 import com.example.darts.db.daos.BattleDAO
@@ -7,21 +9,22 @@ import com.example.darts.db.daos.GameDAO
 import com.example.darts.db.daos.MomentDAO
 import com.example.darts.db.daos.ParticipateDAO
 import com.example.darts.db.daos.PlayerDAO
-import com.example.darts.db.entities.Moment
-import com.example.darts.db.entities.Player
-import com.example.darts.db.entities.Game
-import com.example.darts.db.entities.Participate
+import com.example.darts.db.entities.*
 import com.example.darts.dto.PlayerExportPayload
+import com.example.darts.dto.MomentAttachment
 import com.google.gson.Gson
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.firstOrNull
 import java.io.ByteArrayOutputStream
+import java.io.File
+import java.io.FileOutputStream
 import java.util.zip.GZIPInputStream
 import java.util.zip.GZIPOutputStream
 import javax.inject.Inject
-import kotlin.collections.emptyList
 
 class DartsExportRepository @Inject constructor(
+    @ApplicationContext private val context: Context, // Injected application context to access storage streams
     private val playerDao: PlayerDAO,
     private val battleDao: BattleDAO,
     private val gameDao: GameDAO,
@@ -32,30 +35,20 @@ class DartsExportRepository @Inject constructor(
 
     private val gson = Gson()
 
-    fun getAllPlayers(): Flow<List<Player>> =
-        playerDao.getAllPlayers()
+    fun getAllPlayers(): Flow<List<Player>> = playerDao.getAllPlayers()
 
     /**
-     * Builds a self-contained relational ecosystem package around a single player's historical battles.
+     * Builds a self-contained ecosystem package including physical media binaries.
      */
     suspend fun getExportPayloadForPlayer(playerId: Int): PlayerExportPayload {
-        // 1. Validate exporting player profile
         val primaryPlayer = playerDao.getPlayerById(playerId)
             ?: throw IllegalArgumentException("Player with ID $playerId not found.")
 
-        // 2. Fetch all raw participations for this specific target player
         val primaryParticipations = participateDao.getParticipationsByPlayerIdDirect(playerId)
-
-        // 3. Isolate the unique Battle keys this user was involved in
         val battleIds = primaryParticipations.map { it.idBattle }.distinct()
 
-        val battles = if (battleIds.isNotEmpty()) {
-            battleDao.getBattlesByIds(battleIds)
-        } else {
-            emptyList()
-        }
+        val battles = if (battleIds.isNotEmpty()) battleDao.getBattlesByIds(battleIds) else emptyList()
 
-        // 4. CRITICAL FIX: Find ALL participations for these battles (grabs opponent links too)
         val allParticipations = mutableListOf<Participate>()
         for (battleId in battleIds) {
             val battleParts = participateDao.getParticipationsByBattleIdDirect(battleId)
@@ -63,93 +56,128 @@ class DartsExportRepository @Inject constructor(
         }
         val distinctParticipations = allParticipations.distinctBy { Pair(it.idPlayer, it.idBattle) }
 
-        // 5. CRITICAL FIX: Gather every distinct Player profile participating in these matches
         val involvedPlayerIds = distinctParticipations.map { it.idPlayer }.distinct()
-        val players = involvedPlayerIds.mapNotNull { id ->
-            playerDao.getPlayerById(id)
-        }
+        val players = involvedPlayerIds.mapNotNull { playerDao.getPlayerById(it) }
 
-        // 6. Gather all games configured under these specific structural battles
         val games = mutableListOf<Game>()
         for (battleId in battleIds) {
-            val battleGames = gameDao.getAllGamesByBattle(battleId).firstOrNull() ?: emptyList()// Ensure this exists in GameDAO
+            val battleGames = gameDao.getAllGamesByBattle(battleId).firstOrNull()?:emptyList()
             games.addAll(battleGames)
         }
         val distinctGames = games.distinctBy { it.idGame }
         val gameIds = distinctGames.map { it.idGame }
 
-        // 7. Extract structural Child leaves (Moments and Leg Stats) tied to found matches
         val moments = mutableListOf<Moment>()
         for (gameId in gameIds) {
             val gameMoments = momentDao.getMomentsForGame(gameId).firstOrNull()
-            if (gameMoments != null) {
-                moments.addAll(gameMoments)
+            if (gameMoments != null) moments.addAll(gameMoments)
+        }
+
+        // CRITICAL FIX: Convert local files to binary attachments
+        val attachments = mutableListOf<MomentAttachment>()
+        moments.forEach { moment ->
+            if (moment.type == MomentType.PHOTO || moment.type == MomentType.AUDIO) {
+                val base64String = encodeFileToBase64(moment.contentValue)
+                if (base64String != null) {
+                    val fallbackName = "${moment.type.name.lowercase()}_${moment.idMoment}" +
+                            if (moment.type == MomentType.PHOTO) ".jpg" else ".mp3"
+
+                    attachments.add(
+                        MomentAttachment(
+                            idMoment = moment.idMoment,
+                            momentType = moment.type.name,
+                            fileName = fallbackName,
+                            base64Data = base64String
+                        )
+                    )
+                }
             }
         }
 
-        // Fetch leg metrics for EVERY involved player in those games (Self + Opponents)
-        val legStats = if (gameIds.isNotEmpty()) {
-            statDao.getLegStatsForGames(gameIds)
-        } else {
-            emptyList()
-        }
-
-        // 8. Capture overall lifetime profiles for all involved accounts
-        val careerStats = involvedPlayerIds.mapNotNull { id ->
-            statDao.getCareerStats(id)
-        }
+        val legStats = if (gameIds.isNotEmpty()) statDao.getLegStatsForGames(gameIds) else emptyList()
+        val careerStats = involvedPlayerIds.mapNotNull { statDao.getCareerStats(it) }
 
         return PlayerExportPayload(
-            players = players,                 // Relational requirement: Parent 1
+            players = players,
             careerStats = careerStats,
-            battles = battles,                 // Relational requirement: Parent 2
-            participations = distinctParticipations, // Link table row mapping
-            games = distinctGames,             // Relational requirement: Child of Battle, Parent of Stats/Moments
-            moments = moments,                 // Leaf
-            legStats = legStats                // Leaf
+            battles = battles,
+            participations = distinctParticipations,
+            games = distinctGames,
+            moments = moments,
+            legStats = legStats,
+            attachments = attachments // Staged file system layers
         )
     }
 
     /**
-     * Commits the incoming historical data graph using explicit structural layering order.
+     * Commits incoming data graph and builds local files out of incoming byte strings.
      */
     suspend fun importPayload(payload: PlayerExportPayload) {
-        // LAYER 1: Core Independent Roots (Must exist first)
-        payload.players.forEach { player ->
-            playerDao.addPlayer(player)
-        }
+        payload.players.forEach { playerDao.addPlayer(it) }
+        payload.battles.forEach { battleDao.insertBattle(it) }
+        payload.participations.forEach { participateDao.addParticipation(it) }
+        payload.games.forEach { gameDao.addGame(it) }
 
-        payload.battles.forEach { battle ->
-            battleDao.insertBattle(battle)
-        }
-
-        // LAYER 2: Junction dependencies (Safe because Parents exist)
-        payload.participations.forEach { participation ->
-            participateDao.addParticipation(participation)
-        }
-
-        // LAYER 3: Core Match Records (Safe because Battle parent exists)
-        payload.games.forEach { game ->
-            gameDao.addGame(game)
-        }
-
-        // LAYER 4: Final metric data leaves (Safe because Game and Player parents exist)
+        // Map containing key conversions if needed, but since we map directly:
         payload.moments.forEach { moment ->
-            momentDao.insertMoment(moment)
+            // Look up if this moment contains a packaged binary asset file
+            val fileAsset = payload.attachments.find { it.idMoment == moment.idMoment }
+
+            val updatedContentValue = if (fileAsset != null) {
+                // Rebuild the physical file on the destination phone's internal memory
+                val freshLocalFile = saveBase64ToFile(fileAsset.fileName, fileAsset.base64Data)
+                freshLocalFile?.absolutePath ?: moment.contentValue
+            } else {
+                moment.contentValue
+            }
+
+            // Insert updated entity pointing to the newly generated file path safely
+            momentDao.insertMoment(moment.copy(contentValue = updatedContentValue))
         }
 
         statDao.insertLegStats(payload.legStats)
+        payload.careerStats.forEach { statDao.insertOrReplaceCareerStats(it) }
+    }
 
-        payload.careerStats.forEach { careerStat ->
-            statDao.insertOrReplaceCareerStats(careerStat)
+    // -------------------------------------------------------
+    // FILE ENCODING/DECODING HELPERS
+    // -------------------------------------------------------
+
+    private fun encodeFileToBase64(uriString: String): String? {
+        return try {
+            val uri = Uri.parse(uriString)
+            context.contentResolver.openInputStream(uri)?.use { inputStream ->
+                val bytes = inputStream.readBytes()
+                Base64.encodeToString(bytes, Base64.NO_WRAP)
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null // Skips files that were deleted or inaccessible
         }
     }
 
-    // --- (Keep GZIP/Base64 handling tools exactly as optimized before) ---
+    private fun saveBase64ToFile(fileName: String, base64Data: String): File? {
+        return try {
+            // Stores it safely in the app's isolated files directory: /data/user/0/com.example.darts/files
+            val targetFile = File(context.filesDir, fileName)
+            val fileBytes = Base64.decode(base64Data, Base64.NO_WRAP)
 
+            FileOutputStream(targetFile).use { fos ->
+                fos.write(fileBytes)
+                fos.flush()
+            }
+            targetFile
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+
+    // -------------------------------------------------------
+    // TRANSIT ZIP WRAPPERS
+    // -------------------------------------------------------
     suspend fun exportPlayerToJson(playerId: Int): String {
-        val payload = getExportPayloadForPlayer(playerId)
-        return gson.toJson(payload)
+        return gson.toJson(getExportPayloadForPlayer(playerId))
     }
 
     suspend fun importFromJson(json: String) {
@@ -158,28 +186,22 @@ class DartsExportRepository @Inject constructor(
     }
 
     suspend fun exportPlayerToQrString(playerId: Int): String {
-        val json = exportPlayerToJson(playerId)
-        return compressToBase64(json)
+        return compressToBase64(exportPlayerToJson(playerId))
     }
 
     suspend fun importFromQrString(encodedPayload: String) {
-        val json = decompressFromBase64(encodedPayload)
-        importFromJson(json)
+        importFromJson(decompressFromBase64(encodedPayload))
     }
 
     private fun compressToBase64(text: String): String {
         val outputStream = ByteArrayOutputStream()
-        GZIPOutputStream(outputStream).use {
-            it.write(text.toByteArray(Charsets.UTF_8))
-        }
+        GZIPOutputStream(outputStream).use { it.write(text.toByteArray(Charsets.UTF_8)) }
         return Base64.encodeToString(outputStream.toByteArray(), Base64.NO_WRAP)
     }
 
     private fun decompressFromBase64(encoded: String): String {
         val sanitizedEncoded = encoded.trim().replace("\\s".toRegex(), "")
         val compressedBytes = Base64.decode(sanitizedEncoded, Base64.NO_WRAP)
-        return GZIPInputStream(compressedBytes.inputStream())
-            .bufferedReader(Charsets.UTF_8)
-            .use { it.readText() }
+        return GZIPInputStream(compressedBytes.inputStream()).bufferedReader(Charsets.UTF_8).use { it.readText() }
     }
 }
