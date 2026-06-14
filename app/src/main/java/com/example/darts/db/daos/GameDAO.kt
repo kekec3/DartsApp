@@ -27,4 +27,10 @@ interface GameDAO {
 
     @Query("SELECT * FROM games WHERE idGame = :id")
     suspend fun getGameById(id: Int): Game?
+
+    @Query("UPDATE games SET finished = 1 WHERE idGame = :gameId")
+    suspend fun markFinished(gameId: Int)
+
+    @Query("DELETE FROM games WHERE finished = 0")
+    suspend fun deleteUnfinishedGames()
 }

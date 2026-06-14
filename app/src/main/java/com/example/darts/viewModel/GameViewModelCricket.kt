@@ -260,6 +260,8 @@ class GameViewModelCricket @Inject constructor(
             )
 
             if (newState.isFinished) {
+                gameRepository.markGameFinished(gameId)
+
                 _navigationEvents.emit(GameNavigationEvent.MatchSummary(gameId))
             } else {
                 val showLegSummary = true
