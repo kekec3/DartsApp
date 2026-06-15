@@ -88,7 +88,7 @@ fun DartsNavGraph(
         // 4. Player Stats  ← now uses StatisticsOverviewScreen
         composable<PlayerStatsRoute> { backStackEntry ->
             val args: PlayerStatsRoute = backStackEntry.toRoute()
-            PlayerStatsScreen(
+            StatisticsOverviewScreen(
                 playerId = args.playerId,
                 playerName = args.playerName,
                 onBack     = { navController.popBackStack() }
