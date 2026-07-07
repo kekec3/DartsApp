@@ -6,6 +6,7 @@ import android.provider.OpenableColumns
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.darts.repository.DartsExportRepository
+import com.example.darts.network.NearbyManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.*
@@ -18,7 +19,7 @@ data class ImportUiState(
     val selectedFileName: String? = null,
     val selectedFileUri: Uri? = null,
     val isQrImportDetected: Boolean = false,
-    val parsedPayloadText: String? = null, // Stores the descriptive preview string
+    val parsedPayloadText: String? = null,
     val isProcessing: Boolean = false,
     val errorMessage: String? = null
 )
@@ -39,79 +40,57 @@ class GameImportViewModel @Inject constructor(
     private val _uiEvents = Channel<ImportUiEvent>(Channel.BUFFERED)
     val uiEvents: Flow<ImportUiEvent> = _uiEvents.receiveAsFlow()
 
-    // Holds the raw Base64+GZIP string waiting for database confirmation
     private var pendingRawPayload: String? = null
+    private var nearbyManager: NearbyManager? = null
 
     // -------------------------------------------------------
     // FILE IMPORT (.darts)
     // -------------------------------------------------------
     fun processIncomingFileUri(context: Context, uri: Uri) {
         _uiState.update { it.copy(isProcessing = true, errorMessage = null) }
-
-        var fileName: String? = null
-        context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
-            val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
-            if (nameIndex != -1 && cursor.moveToFirst()) {
-                fileName = cursor.getString(nameIndex)
-            }
-        }
-
         viewModelScope.launch {
             try {
                 context.contentResolver.openInputStream(uri)?.use { inputStream ->
-                    BufferedReader(InputStreamReader(inputStream)).use { reader ->
-                        val rawContent = reader.readText().trim()
-
-                        if (rawContent.isBlank()) {
-                            throw IllegalArgumentException("The selected file is empty.")
-                        }
-
-                        pendingRawPayload = rawContent
-
-                        _uiState.update {
-                            it.copy(
-                                selectedFileUri = uri,
-                                selectedFileName = fileName ?: "Imported File",
-                                isQrImportDetected = false,
-                                parsedPayloadText = "[Compressed Darts Match File Data]",
-                                isProcessing = false,
-                                errorMessage = null
-                            )
-                        }
-                    }
+                    val rawContent = inputStream.bufferedReader().use { it.readText() }.trim()
+                    pendingRawPayload = rawContent
+                    _uiState.update { it.copy(isProcessing = false, parsedPayloadText = "[Imported File Data]") }
                 }
             } catch (e: Exception) {
-                _uiState.update {
-                    it.copy(
-                        isProcessing = false,
-                        errorMessage = "Failed to read file contents."
-                    )
-                }
+                _uiState.update { it.copy(isProcessing = false, errorMessage = "Failed to read file.") }
             }
         }
     }
 
     // -------------------------------------------------------
-    // QR IMPORT
+    // NEARBY QR IMPORT (REPLACES HTTP DOWNLOAD)
     // -------------------------------------------------------
-    fun processQrCodeScanResult(rawResult: String) {
-        if (rawResult.isBlank()) {
-            _uiState.update { it.copy(errorMessage = "Scanned QR code is empty.") }
-            return
-        }
+    fun processQrCodeScanResult(context: Context, token: String) {
+        _uiState.update { it.copy(isProcessing = true, errorMessage = null) }
 
-        // Stage the raw, encoded Base64-GZIP text directly
-        pendingRawPayload = rawResult.trim()
+        if (nearbyManager == null) nearbyManager = NearbyManager(context)
 
-        _uiState.update {
-            it.copy(
-                selectedFileUri = null,
-                selectedFileName = null,
-                isQrImportDetected = true,
-                parsedPayloadText = "[Compressed QR Code Match Data]",
-                errorMessage = null
-            )
-        }
+        // Start discovery to find the advertising device
+        nearbyManager?.startDiscovery(
+            onPayloadReceived = { payload ->
+                viewModelScope.launch {
+                    pendingRawPayload = payload
+                    _uiState.update {
+                        it.copy(
+                            isQrImportDetected = true,
+                            parsedPayloadText = "[Nearby Peer-to-Peer Data]",
+                            isProcessing = false
+                        )
+                    }
+                }
+            },
+            onStatus = { status ->
+                if (status.contains("Failed")) {
+                    viewModelScope.launch {
+                        _uiState.update { it.copy(isProcessing = false, errorMessage = status) }
+                    }
+                }
+            }
+        )
     }
 
     // -------------------------------------------------------
@@ -120,34 +99,24 @@ class GameImportViewModel @Inject constructor(
     fun executeImportConfirmation() {
         val payloadToImport = pendingRawPayload
         if (payloadToImport.isNullOrBlank()) {
-            _uiState.update { it.copy(errorMessage = "No match data staged for import.") }
+            _uiState.update { it.copy(errorMessage = "No match data staged.") }
             return
         }
 
         viewModelScope.launch {
-            _uiState.update { it.copy(isProcessing = true, errorMessage = null) }
-
+            _uiState.update { it.copy(isProcessing = true) }
             try {
-                // Pass the raw string payload down to the repository.
-                // importFromQrString handles decoding Base64 AND decompressing GZIP!
                 repository.importFromQrString(payloadToImport)
-
-                _uiState.update { it.copy(isProcessing = false) }
                 _uiEvents.send(ImportUiEvent.OnImportCompletedSuccess)
                 clearImportSelection()
-
             } catch (e: Exception) {
-                _uiState.update {
-                    it.copy(
-                        isProcessing = false,
-                        errorMessage = "Import failed: Corrupted payload or matching record already exists."
-                    )
-                }
+                _uiState.update { it.copy(isProcessing = false, errorMessage = "Import failed.") }
             }
         }
     }
 
     fun clearImportSelection() {
+        nearbyManager?.stopAll() // Clean up radio resources
         pendingRawPayload = null
         _uiState.update { ImportUiState() }
     }

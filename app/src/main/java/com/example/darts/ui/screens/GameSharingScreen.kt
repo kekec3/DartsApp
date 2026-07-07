@@ -1,7 +1,9 @@
 package com.example.darts.ui.screens
 
 import android.graphics.Bitmap
+import android.os.Build
 import android.widget.Toast
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -9,20 +11,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.KeyboardArrowLeft
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Send
-import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -43,6 +34,7 @@ import com.google.zxing.EncodeHintType
 import com.google.zxing.qrcode.QRCodeWriter
 import java.util.Hashtable
 
+@RequiresApi(Build.VERSION_CODES.Q)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GameSharingScreen(
@@ -53,6 +45,7 @@ fun GameSharingScreen(
     val context = LocalContext.current
     val players by viewModel.players.collectAsState()
     val uiState by viewModel.uiState.collectAsState()
+    val screenState by viewModel.screenState.collectAsState()
 
     var selectedPlayer by remember { mutableStateOf<Player?>(null) }
     var isDropdownExpanded by remember { mutableStateOf(false) }
@@ -60,181 +53,78 @@ fun GameSharingScreen(
     LaunchedEffect(Unit) {
         viewModel.uiEvents.collect { event ->
             when (event) {
-                is ShareUiEvent.ShowToast ->
-                    Toast.makeText(context, event.message, Toast.LENGTH_LONG).show()
-
-                is ShareUiEvent.LaunchSystemIntent ->
-                    context.startActivity(event.intent)
+                is ShareUiEvent.ShowToast -> Toast.makeText(context, event.message, Toast.LENGTH_LONG).show()
+                is ShareUiEvent.LaunchSystemIntent -> context.startActivity(event.intent)
             }
         }
     }
 
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .background(Color.Black)
-    ) {
+    DisposableEffect(Unit) {
+        onDispose { viewModel.stopNearbySharing() }
+    }
 
+    Column(modifier = modifier.fillMaxSize().background(Color.Black)) {
         TopAppBar(
             title = {
-                Box(
-                    modifier = Modifier.fillMaxWidth(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        "Export Player History",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 18.sp,
-                        color = Color.White
-                    )
+                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    Text("Export Player History", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = Color.White)
                 }
             },
             navigationIcon = {
                 IconButton(onClick = onBack) {
-                    Icon(
-                        Icons.Default.KeyboardArrowLeft,
-                        contentDescription = "Back",
-                        tint = Color.White
-                    )
+                    Icon(Icons.Default.KeyboardArrowLeft, contentDescription = "Back", tint = Color.White)
                 }
             },
             colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Black)
         )
 
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(20.dp)
-        ) {
-
-            // ─────────────────────────────
-            // PLAYER SELECT
-            // ─────────────────────────────
+        Column(modifier = Modifier.fillMaxSize().padding(20.dp)) {
             Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(Color(0xFF1A1A1A), RoundedCornerShape(12.dp))
-                    .clickable { isDropdownExpanded = true }
-                    .padding(16.dp)
+                modifier = Modifier.fillMaxWidth().background(Color(0xFF1A1A1A), RoundedCornerShape(12.dp))
+                    .clickable { isDropdownExpanded = true }.padding(16.dp)
             ) {
-                Text(
-                    text = selectedPlayer?.username ?: "Select player",
-                    color = if (selectedPlayer != null) Color.White else Color.DarkGray
-                )
-
-                DropdownMenu(
-                    expanded = isDropdownExpanded,
-                    onDismissRequest = { isDropdownExpanded = false }
-                ) {
+                Text(text = selectedPlayer?.username ?: "Select player", color = if (selectedPlayer != null) Color.White else Color.DarkGray)
+                DropdownMenu(expanded = isDropdownExpanded, onDismissRequest = { isDropdownExpanded = false }) {
                     players.forEach { player ->
-                        DropdownMenuItem(
-                            text = { Text(player.username) },
-                            onClick = {
-                                selectedPlayer = player
-                                isDropdownExpanded = false
-                            }
-                        )
+                        DropdownMenuItem(text = { Text(player.username) }, onClick = { selectedPlayer = player; isDropdownExpanded = false })
                     }
                 }
             }
 
             Spacer(Modifier.height(24.dp))
 
-            // ─────────────────────────────
-            // EXPORT PREVIEW
-            // ─────────────────────────────
             selectedPlayer?.let { player ->
+                LaunchedEffect(player) { viewModel.startNearbyAdvertising(context, player) }
 
-                val qrPayloadState = produceState<String?>(null, player.idPlayer) {
-                    value = viewModel.getQrCodePayload(player)
-                }
-
-                Card(
-                    colors = CardDefaults.cardColors(Color(0xFF1A1A1A)),
-                    shape = RoundedCornerShape(16.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(
-                        Modifier.padding(20.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-
-                        Text(
-                            player.username,
-                            color = Color.White,
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-
-                        Spacer(Modifier.height(12.dp))
-
-                        Text(
-                            "QR Export Payload",
-                            color = Color(0xFF76B947),
-                            fontSize = 12.sp
-                        )
-
+                Card(colors = CardDefaults.cardColors(Color(0xFF1A1A1A)), shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(player.username, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
                         Spacer(Modifier.height(8.dp))
-
-                        qrPayloadState.value?.let { qr ->
-                            QRGeneratorContainer(textToEncode = qr)
+                        if (screenState.isGeneratingQr) {
+                            CircularProgressIndicator(color = Color(0xFF76B947))
+                        } else {
+                            screenState.qrPayload?.let { token -> QRGeneratorContainer(textToEncode = token) }
                         }
                     }
                 }
             }
 
             Spacer(Modifier.height(24.dp))
-
-            // ─────────────────────────────
-            // SHARE OPTIONS
-            // ─────────────────────────────
-            Text(
-                "Share",
-                color = Color.White,
-                fontWeight = FontWeight.Bold
-            )
-
+            Text("Share", color = Color.White, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(12.dp))
 
-            Row(
-                horizontalArrangement = Arrangement.SpaceBetween,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-
-                ShareOptionItem("WA File", Icons.Default.Share, Color(0xFF075E54)) {
-                    selectedPlayer?.let {
-                        viewModel.shareViaApplicationFile(context, it, "com.whatsapp")
-                    }
-                }
-
-                ShareOptionItem("Gmail", Icons.Default.Email, Color(0xFFEA4335)) {
-                    selectedPlayer?.let {
-                        viewModel.shareViaApplicationFile(context, it, "com.google.android.gm")
-                    }
-                }
-
-                ShareOptionItem("More", Icons.Default.MoreVert, Color.Gray) {
-                    selectedPlayer?.let {
-                        viewModel.shareViaApplicationFile(context, it, null)
-                    }
-                }
+            Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+                ShareOptionItem("WA File", Icons.Default.Share, Color(0xFF075E54)) { selectedPlayer?.let { viewModel.shareViaApplicationFile(context, it, "com.whatsapp") } }
+                ShareOptionItem("Gmail", Icons.Default.Email, Color(0xFFEA4335)) { selectedPlayer?.let { viewModel.shareViaApplicationFile(context, it, "com.google.android.gm") } }
+                ShareOptionItem("More", Icons.Default.MoreVert, Color.Gray) { selectedPlayer?.let { viewModel.shareViaApplicationFile(context, it, null) } }
             }
 
             Spacer(Modifier.weight(1f))
 
-            // ─────────────────────────────
-            // DOWNLOAD
-            // ─────────────────────────────
             Button(
-                onClick = {
-                    selectedPlayer?.let {
-                        viewModel.exportToPublicDownloads(context, it)
-                    }
-                },
+                onClick = { selectedPlayer?.let { viewModel.exportToPublicDownloads(context, it) } },
                 enabled = selectedPlayer != null && uiState !is ShareUiState.Loading,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(60.dp),
+                modifier = Modifier.fillMaxWidth().height(60.dp),
                 colors = ButtonDefaults.buttonColors(Color(0xFF76B947))
             ) {
                 Text("EXPORT TO DOWNLOADS", color = Color.Black)
@@ -245,17 +135,8 @@ fun GameSharingScreen(
 
 @Composable
 fun ShareOptionItem(label: String, icon: ImageVector, bgColor: Color, onClick: () -> Unit) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.clickable { onClick() }
-    ) {
-        Box(
-            modifier = Modifier
-                .size(56.dp)
-                .clip(CircleShape)
-                .background(bgColor),
-            contentAlignment = Alignment.Center
-        ) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.clickable { onClick() }) {
+        Box(modifier = Modifier.size(56.dp).clip(CircleShape).background(bgColor), contentAlignment = Alignment.Center) {
             Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(28.dp))
         }
         Spacer(modifier = Modifier.height(8.dp))
@@ -265,59 +146,16 @@ fun ShareOptionItem(label: String, icon: ImageVector, bgColor: Color, onClick: (
 
 @Composable
 fun QRGeneratorContainer(textToEncode: String) {
-    Box(
-        modifier = Modifier
-            .size(160.dp)
-            .background(Color.White, RoundedCornerShape(12.dp))
-            .padding(8.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        QRVisualizerWidget(text = textToEncode)
-    }
-}
-
-@Composable
-fun QRVisualizerWidget(text: String, modifier: Modifier = Modifier) {
-    val qrBitmap = remember(text) {
-        generateQrCodeBitmap(text, 512, 512)
-    }
-
-    qrBitmap?.let { bitmap ->
-        Image(
-            painter = BitmapPainter(bitmap.asImageBitmap()),
-            contentDescription = "QR Code Payload",
-            modifier = modifier.size(140.dp)
-        )
+    Box(modifier = Modifier.size(160.dp).background(Color.White, RoundedCornerShape(12.dp)).padding(8.dp), contentAlignment = Alignment.Center) {
+        val qrBitmap = remember(textToEncode) { generateQrCodeBitmap(textToEncode, 512, 512) }
+        qrBitmap?.let { Image(painter = BitmapPainter(it.asImageBitmap()), contentDescription = "QR", modifier = Modifier.size(140.dp)) }
     }
 }
 
 private fun generateQrCodeBitmap(content: String, width: Int, height: Int): Bitmap? {
     return try {
-        val hints = Hashtable<EncodeHintType, Any>().apply {
-            put(EncodeHintType.MARGIN, 1)
-        }
-
-        val bitMatrix = QRCodeWriter().encode(
-            content,
-            BarcodeFormat.QR_CODE,
-            width,
-            height,
-            hints
-        )
-
-        val pixels = IntArray(width * height)
-        for (y in 0 until height) {
-            val offset = y * width
-            for (x in 0 until width) {
-                pixels[offset + x] = if (bitMatrix.get(x, y)) 0xFF000000.toInt() else 0xFFFFFFFF.toInt()
-            }
-        }
-
-        Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888).apply {
-            setPixels(pixels, 0, width, 0, 0, width, height)
-        }
-    } catch (e: Exception) {
-        e.printStackTrace()
-        null
-    }
+        val bitMatrix = QRCodeWriter().encode(content, BarcodeFormat.QR_CODE, width, height, Hashtable<EncodeHintType, Any>().apply { put(EncodeHintType.MARGIN, 1) })
+        val pixels = IntArray(width * height) { i -> if (bitMatrix.get(i % width, i / width)) 0xFF000000.toInt() else 0xFFFFFFFF.toInt() }
+        Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888).apply { setPixels(pixels, 0, width, 0, 0, width, height) }
+    } catch (e: Exception) { null }
 }

@@ -17,6 +17,7 @@ foundation = "1.11.0"
 uiGraphics = "1.11.2"
 foundationVersion = "1.11.2"
 uiText = "1.11.2"
+mlkitBarcode = "18.3.0"
 
 
 [libraries]
@@ -47,6 +48,8 @@ androidx-compose-foundation = { group = "androidx.compose.foundation", name = "f
 androidx-ui-graphics = { group = "androidx.compose.ui", name = "ui-graphics", version.ref = "uiGraphics" }
 androidx-foundation = { group = "androidx.compose.foundation", name = "foundation", version.ref = "foundationVersion" }
 androidx-compose-ui-text = { group = "androidx.compose.ui", name = "ui-text", version.ref = "uiText" }
+play-services-code-scanner = { group = "com.google.android.gms", name = "play-services-code-scanner", version = "16.1.0" }
+play-services-mlkit-barcode-scanning = { group = "com.google.android.gms", name = "play-services-mlkit-barcode-scanning", version.ref = "mlkitBarcode" }
 
 
 [plugins]
