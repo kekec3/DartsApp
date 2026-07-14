@@ -89,7 +89,21 @@ class GameViewModelCricket @Inject constructor(
         viewModelScope.launch {
             val game = gameRepository.getGameById(gameId) ?: return@launch
             val players = battleRepository.getPlayersOfBattle(game.idBattle)
-            val playerStates = players.map { PlayerStateCricket(it) }
+
+            val orderedPlayers = when {
+                cfg.startingPlayerId == -1 -> players.shuffled()
+                cfg.startingPlayerId > 0 -> {
+                    val startIndex = players.indexOfFirst { it.idPlayer == cfg.startingPlayerId }
+                    if (startIndex != -1) {
+                        players.subList(startIndex, players.size) + players.subList(0, startIndex)
+                    } else {
+                        players
+                    }
+                }
+                else -> players
+            }
+
+            val playerStates = orderedPlayers.map { PlayerStateCricket(it) }
             startGame(
                 players = playerStates,
                 cutthroat = cfg.cutthroat,

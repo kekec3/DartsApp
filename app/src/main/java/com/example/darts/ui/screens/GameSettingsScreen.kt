@@ -41,8 +41,14 @@ fun GameSettingsScreen(
     onStartMatch: (gameId: Int, settings: GameSettings) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    // Load the active battle context
+    LaunchedEffect(battleId) {
+        viewModel.loadBattle(battleId)
+    }
+
     val config by viewModel.gameSettings.collectAsStateWithLifecycle()
     val isCreating by viewModel.isCreatingGame.collectAsStateWithLifecycle()
+    val players by viewModel.battlePlayers.collectAsStateWithLifecycle()
 
     val context = LocalContext.current
     val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
@@ -59,6 +65,7 @@ fun GameSettingsScreen(
     var expandedType by remember { mutableStateOf(false) }
     var expandedScore by remember { mutableStateOf(false) }
     var expandedLegs by remember { mutableStateOf(false) }
+    var expandedStartingPlayer by remember { mutableStateOf(false) }
 
     val menuModifier = Modifier.background(Color(0xFF2A2A2A))
     val menuItemColors = MenuDefaults.itemColors(
@@ -192,6 +199,51 @@ fun GameSettingsScreen(
 
                     SettingsDivider()
 
+                    // --- Dynamic Starting Player Selection Dropdown ---
+                    val startingPlayerLabel = when (config.startingPlayerId) {
+                        -1 -> "Random"
+                        -2 -> "Default (First)"
+                        else -> players.find { it.idPlayer == config.startingPlayerId }?.username ?: "Default"
+                    }
+
+                    SettingsDropdownRow(
+                        label = "Starting Player",
+                        value = startingPlayerLabel,
+                        expanded = expandedStartingPlayer,
+                        onExpandedChange = { expandedStartingPlayer = it },
+                        menuModifier = menuModifier,
+                        menuItemColors = menuItemColors
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Random") },
+                            colors = menuItemColors,
+                            onClick = {
+                                viewModel.updateSettings(config.copy(startingPlayerId = -1))
+                                expandedStartingPlayer = false
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Default (First)") },
+                            colors = menuItemColors,
+                            onClick = {
+                                viewModel.updateSettings(config.copy(startingPlayerId = -2))
+                                expandedStartingPlayer = false
+                            }
+                        )
+                        players.forEach { player ->
+                            DropdownMenuItem(
+                                text = { Text(player.username) },
+                                colors = menuItemColors,
+                                onClick = {
+                                    viewModel.updateSettings(config.copy(startingPlayerId = player.idPlayer))
+                                    expandedStartingPlayer = false
+                                }
+                            )
+                        }
+                    }
+
+                    SettingsDivider()
+
                     if (isX01) {
                         SettingsSwitchRow(
                             label = "Double Out",
@@ -227,13 +279,6 @@ fun GameSettingsScreen(
                             locationPermissionState.launchPermissionRequest()
                         }
                     }
-
-                    SettingsDivider()
-
-                    SettingsSwitchRow(
-                        label = "Show Animations",
-                        checked = config.showAnimations
-                    ) { viewModel.updateSettings(config.copy(showAnimations = it)) }
                 }
             }
 
@@ -255,7 +300,7 @@ fun GameSettingsScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             TextButton(
-                onClick = { viewModel.updateSettings(GameSettings()) },
+                onClick = { viewModel.resetToDefaults() },
                 colors = ButtonDefaults.textButtonColors(contentColor = Color.Gray)
             ) {
                 Text(
@@ -297,6 +342,8 @@ fun GameSettingsScreen(
     }
 }
 
+// --- Internal Screen Sub-Composables & Helpers ---
+
 @Composable
 fun SettingsDropdownRow(
     label: String,
@@ -304,23 +351,21 @@ fun SettingsDropdownRow(
     expanded: Boolean,
     onExpandedChange: (Boolean) -> Unit,
     menuModifier: Modifier,
-    menuItemColors: androidx.compose.material3.MenuItemColors,
+    menuItemColors: MenuItemColors,
     content: @Composable ColumnScope.() -> Unit
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onExpandedChange(true) } // Entire row is now clickable
-            .padding(vertical = 12.dp, horizontal = 16.dp), // Slightly more vertical padding for better touch target
+            .clickable { onExpandedChange(true) }
+            .padding(horizontal = 16.dp, vertical = 18.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(label, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Medium)
-
-        // This Box acts as the anchor for the DropdownMenu
         Box {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(value, color = Color.Gray, fontSize = 15.sp)
+                Text(value, color = Color.Gray, fontSize = 14.sp)
                 Spacer(modifier = Modifier.width(4.dp))
                 Icon(
                     imageVector = Icons.Default.KeyboardArrowRight,
@@ -341,37 +386,15 @@ fun SettingsDropdownRow(
 }
 
 @Composable
-fun LocationStatusBox(trackLocation: Boolean, isGranted: Boolean, gpsStatus: Boolean) {
-    val (text, color) = when {
-        !trackLocation -> "Location tracking disabled" to Color.Gray
-        !isGranted -> "Permission required to track location" to Color(0xFFE53935)
-        !gpsStatus -> "GPS hardware is off" to Color(0xFFE53935)
-        else -> "Location tracking ready" to Color(0xFF76B947)
-    }
-
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(color.copy(alpha = 0.1f), RoundedCornerShape(8.dp))
-            .border(1.dp, color.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
-            .padding(horizontal = 12.dp, vertical = 8.dp),
-        contentAlignment = Alignment.CenterStart
-    ) {
-        Text(
-            text = text,
-            color = color,
-            fontSize = 12.sp,
-            fontWeight = FontWeight.Medium
-        )
-    }
-}
-
-@Composable
-fun SettingsSwitchRow(label: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+fun SettingsSwitchRow(
+    label: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp, horizontal = 16.dp),
+            .padding(horizontal = 16.dp, vertical = 10.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -383,7 +406,8 @@ fun SettingsSwitchRow(label: String, checked: Boolean, onCheckedChange: (Boolean
                 checkedThumbColor = Color.White,
                 checkedTrackColor = Color(0xFF76B947),
                 uncheckedThumbColor = Color.Gray,
-                uncheckedTrackColor = Color.DarkGray
+                uncheckedTrackColor = Color(0xFF2D2D2D),
+                uncheckedBorderColor = Color.Transparent
             )
         )
     }
@@ -392,10 +416,40 @@ fun SettingsSwitchRow(label: String, checked: Boolean, onCheckedChange: (Boolean
 @Composable
 fun SettingsDivider() {
     HorizontalDivider(
-        color = Color.White.copy(alpha = 0.1f),
-        thickness = 1.dp,
+        color = Color.DarkGray.copy(alpha = 0.3f),
+        thickness = 0.5.dp,
         modifier = Modifier.padding(horizontal = 16.dp)
     )
+}
+
+@Composable
+fun LocationStatusBox(
+    trackLocation: Boolean,
+    isGranted: Boolean,
+    gpsStatus: Boolean
+) {
+    if (trackLocation) {
+        val (statusText, statusColor) = when {
+            !isGranted -> "Location Permission Denied" to Color.Red
+            !gpsStatus -> "GPS is Disabled" to Color.Yellow
+            else -> "Location tracking active (GPS)" to Color(0xFF76B947)
+        }
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(statusColor.copy(alpha = 0.15f), RoundedCornerShape(8.dp))
+                .border(1.dp, statusColor.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+                .padding(12.dp)
+        ) {
+            Text(
+                text = statusText,
+                color = statusColor,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Medium
+            )
+        }
+    }
 }
 
 private fun runGameCreation(
@@ -407,7 +461,11 @@ private fun runGameCreation(
 ) {
     viewModel.saveAndStartGame(
         battleId = battleId,
-        onComplete = { gameId -> onStartMatch(gameId, config) },
-        onError = { errorMsg -> Toast.makeText(context, errorMsg, Toast.LENGTH_LONG).show() }
+        onComplete = { gameId ->
+            onStartMatch(gameId, config)
+        },
+        onError = { errorMsg ->
+            Toast.makeText(context, errorMsg, Toast.LENGTH_LONG).show()
+        }
     )
 }

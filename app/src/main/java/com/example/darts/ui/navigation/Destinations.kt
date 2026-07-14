@@ -20,14 +20,16 @@ data class X01GameRoute(
     val maxLegs: Int,
     val target: Int = 501,
     val doubleOut: Boolean = false,
-    val masterIn: Boolean = false
+    val masterIn: Boolean = false,
+    val startingPlayerId: Int = -1
 ) : GameRoute
 
 @Serializable
 data class CricketGameRoute(
     val gameId: Int,
     val maxLegs: Int,
-    val cutThroat: Boolean = false
+    val cutThroat: Boolean = false,
+    val startingPlayerId: Int = -1
 ) : GameRoute
 
 @Serializable data class GameSettingsRoute(val battleId: Int)
