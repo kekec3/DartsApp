@@ -14,10 +14,12 @@ data class XO1Config(
     val target: Int = 501,
     val doubleOut: Boolean = false,
     val masterIn: Boolean = false,
+    val startingPlayerId: Int = -1
 ) : GameConfig
 
 data class CricketConfig(
     val cutthroat: Boolean = false,
+    val startingPlayerId: Int = -1
 ) : GameConfig
 
 interface BaseGameViewModel {

@@ -128,7 +128,8 @@ fun DartsNavGraph(
                             CricketGameRoute(
                                 gameId   = gameId,
                                 maxLegs  = settings.legs,
-                                cutThroat = settings.cutThroat
+                                cutThroat = settings.cutThroat,
+                                startingPlayerId = settings.startingPlayerId
                             )
                         )
                         else -> navController.navigate(
@@ -137,7 +138,8 @@ fun DartsNavGraph(
                                 maxLegs   = settings.legs,
                                 target    = settings.startingScore.toIntOrNull() ?: 501,
                                 doubleOut = settings.doubleOut,
-                                masterIn  = settings.masterIn
+                                masterIn  = settings.masterIn,
+                                startingPlayerId = settings.startingPlayerId
                             )
                         )
                     }
@@ -151,7 +153,8 @@ fun DartsNavGraph(
             val config = XO1Config(
                 target    = args.target,
                 doubleOut = args.doubleOut,
-                masterIn  = args.masterIn
+                masterIn  = args.masterIn,
+                startingPlayerId = args.startingPlayerId
             )
             val viewModel: BaseGameViewModel = hiltViewModel<GameViewModelX01>()
             LaunchedEffect(args.gameId) {
@@ -174,7 +177,10 @@ fun DartsNavGraph(
         // 7b. Cricket Scoring Screen
         composable<CricketGameRoute> { backStackEntry ->
             val args: CricketGameRoute = backStackEntry.toRoute()
-            val config = CricketConfig(cutthroat = args.cutThroat)
+            val config = CricketConfig(
+                cutthroat = args.cutThroat,
+                startingPlayerId = args.startingPlayerId
+                )
             val viewModel: BaseGameViewModel = hiltViewModel<GameViewModelCricket>()
             LaunchedEffect(args.gameId) {
                 viewModel.loadGame(gameId = args.gameId, config = config, maxLegs = args.maxLegs)

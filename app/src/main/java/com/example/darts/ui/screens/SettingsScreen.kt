@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material3.*
@@ -17,17 +16,35 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.darts.viewModel.SettingsViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     modifier: Modifier = Modifier,
+    viewModel: SettingsViewModel = hiltViewModel(),
     onBack: () -> Unit = {},
-    onImportData:() -> Unit
+    onImportData: () -> Unit
 ) {
-    var darkMode by remember { mutableStateOf(true) }
-    var soundEffects by remember { mutableStateOf(true) }
-    var vibration by remember { mutableStateOf(true) }
+    val gameType by viewModel.gameType.collectAsStateWithLifecycle()
+    val startingScore by viewModel.startingScore.collectAsStateWithLifecycle()
+    val legs by viewModel.legs.collectAsStateWithLifecycle()
+    val doubleOut by viewModel.doubleOut.collectAsStateWithLifecycle()
+    val startingPlayerDefault by viewModel.startingPlayerDefault.collectAsStateWithLifecycle()
+    val soundEffects by viewModel.soundEffects.collectAsStateWithLifecycle()
+
+    var expandedType by remember { mutableStateOf(false) }
+    var expandedScore by remember { mutableStateOf(false) }
+    var expandedLegs by remember { mutableStateOf(false) }
+    var expandedCheckout by remember { mutableStateOf(false) }
+    var expandedStartingPlayer by remember { mutableStateOf(false) }
+
+    val menuItemColors = MenuDefaults.itemColors(
+        textColor = Color.White,
+        leadingIconColor = Color.Gray
+    )
 
     Column(
         modifier = modifier
@@ -45,12 +62,7 @@ fun SettingsScreen(
                     Icon(Icons.Default.KeyboardArrowLeft, contentDescription = "Back", tint = Color.White)
                 }
             },
-            actions = {
-                // Action icon placeholder or "Save" button
-                IconButton(onClick = { /* Add/Save Action */ }) {
-                    Icon(Icons.Default.Add, contentDescription = "Action", tint = Color(0xFF76B947))
-                }
-            },
+            // PLUS ICON REMOVED HERE by omitting the 'actions' block
             colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Black)
         )
 
@@ -62,28 +74,174 @@ fun SettingsScreen(
         ) {
             // --- GENERAL SECTION ---
             SettingsCategoryLabel("GAME DEFAULTS")
-            SettingsPlainRow("Starting Score", "501")
-            SettingsPlainRow("Match Format", "Best of 5 Legs")
-            SettingsPlainRow("Checkout Rule", "Double Out")
-            SettingsPlainRow("Starting Player", "Random")
+
+            SettingsDropdownRow(
+                label = "Game Type",
+                value = gameType,
+                expanded = expandedType,
+                onExpandedChange = { expandedType = it }
+            ) {
+                DropdownMenuItem(
+                    text = { Text("x01") },
+                    colors = menuItemColors,
+                    onClick = {
+                        viewModel.setGameType("x01")
+                        expandedType = false
+                    }
+                )
+                DropdownMenuItem(
+                    text = { Text("Cricket") },
+                    colors = menuItemColors,
+                    onClick = {
+                        viewModel.setGameType("Cricket")
+                        expandedType = false
+                    }
+                )
+            }
+
+            SettingsDropdownRow(
+                label = "Starting Score",
+                value = if (gameType.lowercase() == "cricket") "N/A" else startingScore,
+                expanded = expandedScore,
+                onExpandedChange = { expandedScore = it }
+            ) {
+                listOf("301", "501", "701").forEach { score ->
+                    DropdownMenuItem(
+                        text = { Text(score) },
+                        colors = menuItemColors,
+                        onClick = {
+                            viewModel.setStartingScore(score)
+                            expandedScore = false
+                        }
+                    )
+                }
+            }
+
+            SettingsDropdownRow(
+                label = "Match Format",
+                value = if (legs == 1) "1 Leg" else "Best of $legs Legs",
+                expanded = expandedLegs,
+                onExpandedChange = { expandedLegs = it }
+            ) {
+                listOf(1, 3, 5, 7, 9).forEach { legCount ->
+                    DropdownMenuItem(
+                        text = { Text(if (legCount == 1) "1 Leg" else "Best of $legCount Legs") },
+                        colors = menuItemColors,
+                        onClick = {
+                            viewModel.setLegs(legCount)
+                            expandedLegs = false
+                        }
+                    )
+                }
+            }
+
+            SettingsDropdownRow(
+                label = "Checkout Rule",
+                value = if (doubleOut) "Double Out" else "Single Out",
+                expanded = expandedCheckout,
+                onExpandedChange = { expandedCheckout = it }
+            ) {
+                DropdownMenuItem(
+                    text = { Text("Single Out") },
+                    colors = menuItemColors,
+                    onClick = {
+                        viewModel.setDoubleOut(false)
+                        expandedCheckout = false
+                    }
+                )
+                DropdownMenuItem(
+                    text = { Text("Double Out") },
+                    colors = menuItemColors,
+                    onClick = {
+                        viewModel.setDoubleOut(true)
+                        expandedCheckout = false
+                    }
+                )
+            }
+
+            SettingsDropdownRow(
+                label = "Starting Player",
+                value = if (startingPlayerDefault.lowercase() == "random") "Random" else "Default (First)",
+                expanded = expandedStartingPlayer,
+                onExpandedChange = { expandedStartingPlayer = it }
+            ) {
+                DropdownMenuItem(
+                    text = { Text("Random") },
+                    colors = menuItemColors,
+                    onClick = {
+                        viewModel.setStartingPlayerDefault("Random")
+                        expandedStartingPlayer = false
+                    }
+                )
+                DropdownMenuItem(
+                    text = { Text("Default (First)") },
+                    colors = menuItemColors,
+                    onClick = {
+                        viewModel.setStartingPlayerDefault("Default")
+                        expandedStartingPlayer = false
+                    }
+                )
+            }
 
             Spacer(modifier = Modifier.height(24.dp))
 
             // --- PREFERENCES SECTION ---
             SettingsCategoryLabel("PREFERENCES")
-            SettingsSwitchRowPlain("Dark Mode", darkMode) { darkMode = it }
-            SettingsSwitchRowPlain("Sound Effects", soundEffects) { soundEffects = it }
-            SettingsSwitchRowPlain("Vibration", vibration) { vibration = it }
+            SettingsSwitchRowPlain("Sound Effects", soundEffects) { viewModel.setSoundEffects(it) }
 
             Spacer(modifier = Modifier.height(24.dp))
 
             // --- ACCOUNT & ABOUT ---
             SettingsCategoryLabel("SYSTEM")
-            SettingsPlainRow("Import Data", "CSV / JSON", onImportData)
+            SettingsPlainRow("Import Data", "CSV / JSON", onClick = onImportData)
             SettingsPlainRow("Version", "1.0.0")
 
             Spacer(modifier = Modifier.height(40.dp))
         }
+    }
+}
+
+@Composable
+fun SettingsDropdownRow(
+    label: String,
+    value: String,
+    expanded: Boolean,
+    onExpandedChange: (Boolean) -> Unit,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    Column {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { onExpandedChange(true) }
+                .padding(vertical = 18.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(label, color = Color.White, fontSize = 16.sp)
+            Box {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (value.isNotEmpty()) {
+                        Text(value, color = Color.Gray, fontSize = 14.sp)
+                        Spacer(modifier = Modifier.width(8.dp))
+                    }
+                    Icon(
+                        Icons.Default.KeyboardArrowRight,
+                        contentDescription = null,
+                        tint = Color.DarkGray,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+                DropdownMenu(
+                    expanded = expanded,
+                    onDismissRequest = { onExpandedChange(false) },
+                    modifier = Modifier.background(Color(0xFF2A2A2A))
+                ) {
+                    content()
+                }
+            }
+        }
+        HorizontalDivider(color = Color.DarkGray.copy(alpha = 0.3f), thickness = 0.5.dp)
     }
 }
 
@@ -99,12 +257,13 @@ fun SettingsCategoryLabel(label: String) {
 }
 
 @Composable
-fun SettingsPlainRow(label: String, value: String, onClick: ()->Unit = {}) {
+fun SettingsPlainRow(label: String, value: String, onClick: (() -> Unit)? = null) {
     Column {
+        val clickableModifier = if (onClick != null) Modifier.clickable { onClick() } else Modifier
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable { onClick() }
+                .then(clickableModifier)
                 .padding(vertical = 18.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically

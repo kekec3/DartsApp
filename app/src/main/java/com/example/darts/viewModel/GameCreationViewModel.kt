@@ -5,7 +5,10 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.darts.db.entities.Game
+import com.example.darts.db.entities.Player
 import com.example.darts.db.repositories.GameRepository
+import com.example.darts.db.repositories.BattleRepository
+import com.example.darts.repository.SettingsRepository
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.Priority
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -21,7 +24,9 @@ import javax.inject.Inject
 @HiltViewModel
 class GameCreationViewModel @Inject constructor(
     private val gameRepository: GameRepository,
-    private val fusedLocationClient: FusedLocationProviderClient
+    private val battleRepository: BattleRepository,
+    private val fusedLocationClient: FusedLocationProviderClient,
+    private val settingsRepository: SettingsRepository
 ) : ViewModel() {
 
     private val _currentBattleId = MutableStateFlow<Int?>(null)
@@ -38,17 +43,57 @@ class GameCreationViewModel @Inject constructor(
             initialValue = emptyList()
         )
 
+    // Dynamic player flow for the current active battle context
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val battlePlayers: StateFlow<List<Player>> = _currentBattleId
+        .filterNotNull()
+        .mapLatest { id -> // Changed from flatMapLatest to mapLatest
+            battleRepository.getPlayersOfBattle(id)
+        }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
     fun loadBattle(battleId: Int) {
         if (_currentBattleId.value != battleId) {
             _currentBattleId.value = battleId
         }
     }
 
-    private val _gameSettings = MutableStateFlow(GameSettings())
+    private val _gameSettings = MutableStateFlow(
+        GameSettings(
+            type = settingsRepository.getGameType(),
+            startingScore = settingsRepository.getStartingScore(),
+            legs = settingsRepository.getLegs(),
+            doubleOut = settingsRepository.isDoubleOut(),
+            showSuggestions = settingsRepository.isShowSuggestions(),
+            trackLocation = settingsRepository.isTrackLocation(),
+            startingPlayerId = when (settingsRepository.getStartingPlayerDefault().lowercase()) {
+                "random" -> -1
+                else -> -2
+            }
+        )
+    )
     val gameSettings = _gameSettings.asStateFlow()
 
     fun updateSettings(settings: GameSettings) {
         _gameSettings.value = settings
+    }
+
+    fun resetToDefaults() {
+        _gameSettings.value = GameSettings(
+            type = settingsRepository.getGameType(),
+            startingScore = settingsRepository.getStartingScore(),
+            legs = settingsRepository.getLegs(),
+            doubleOut = settingsRepository.isDoubleOut(),
+            showSuggestions = settingsRepository.isShowSuggestions(),
+            trackLocation = settingsRepository.isTrackLocation(),
+            startingPlayerId = when (settingsRepository.getStartingPlayerDefault().lowercase()) {
+                "random" -> -1
+                else -> -2
+            }
+        )
     }
 
     private val _isCreatingGame = MutableStateFlow(false)
@@ -66,25 +111,18 @@ class GameCreationViewModel @Inject constructor(
 
         viewModelScope.launch {
             try {
-                val dateString = SimpleDateFormat(
-                    "dd.MM.yyyy HH:mm",
-                    Locale.getDefault()
-                ).format(Date())
+                val dateString = SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault()).format(Date())
 
                 var coords = ""
 
                 if (_gameSettings.value.trackLocation) {
                     coords = getDeviceLocation()
-
                     if (coords.isEmpty() || coords == "0.0,0.0") {
                         Log.e("LOCATION", "Tracking enabled but coordinates couldn't be fetched.")
                         _isCreatingGame.value = false
                         onError("Failed to acquire exact GPS coordinates. Please try again.")
                         return@launch
                     }
-                    Log.d("LOCATION", "Acquired coords: $coords")
-                } else {
-                    Log.d("LOCATION", "Tracking disabled. Creating game without location.")
                 }
 
                 val newGame = Game(
@@ -110,7 +148,6 @@ class GameCreationViewModel @Inject constructor(
     @SuppressLint("MissingPermission")
     private suspend fun getDeviceLocation(): String {
         try {
-            Log.d("LOCATION", "Requesting high-accuracy fresh current location")
             val currentLocation = withTimeoutOrNull(12000) {
                 fusedLocationClient.getCurrentLocation(
                     Priority.PRIORITY_HIGH_ACCURACY,
@@ -122,12 +159,10 @@ class GameCreationViewModel @Inject constructor(
                 return "${currentLocation.latitude},${currentLocation.longitude}"
             }
 
-            Log.d("LOCATION", "Fresh location timed out, fallback to last known location")
             val lastLocation = fusedLocationClient.lastLocation.await()
             if (lastLocation != null) {
                 return "${lastLocation.latitude},${lastLocation.longitude}"
             }
-
         } catch (e: Exception) {
             Log.e("LOCATION", "getDeviceLocation execution failed", e)
         }
@@ -136,21 +171,16 @@ class GameCreationViewModel @Inject constructor(
 }
 
 /**
- * Flat UI-level settings collected on the Game Settings screen.
- * Converted to the appropriate [GameConfig] subtype when navigating
- * to the actual game screen.
+ * Flat UI-level settings collected on the Game Settings screen[cite: 4].
  */
 data class GameSettings(
-    val type: String = "x01",           // "x01" | "cricket"
-    val startingScore: String = "501",  // x01 only: "301" | "501" | "701"
+    val type: String = "x01",
+    val startingScore: String = "501",
     val legs: Int = 3,
-    // x01 modifiers
     val doubleOut: Boolean = false,
     val masterIn: Boolean = false,
-    // cricket modifiers
     val cutThroat: Boolean = false,
-    // general
     val showSuggestions: Boolean = true,
     val trackLocation: Boolean = false,
-    val showAnimations: Boolean = true
+    val startingPlayerId: Int = -1 // -1 = Random, -2 = Default Order, >0 = Player ID
 )

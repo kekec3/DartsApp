@@ -1,20 +1,18 @@
 package com.example.darts.viewModel
 
-import android.os.Build
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.darts.db.entities.Moment
 import com.example.darts.db.entities.MomentType
-import com.example.darts.db.entities.Player
 import com.example.darts.db.entities.PlayerLegStats
 import com.example.darts.db.repositories.BattleRepository
 import com.example.darts.db.repositories.GameRepository
 import com.example.darts.db.repositories.MomentRepository
 import com.example.darts.db.repositories.StatRepository
+import com.example.darts.repository.SettingsRepository // FIX: Corrected import to match your actual package path
 import com.example.darts.engine.DartThrow
 import com.example.darts.engine.GameEngineX01
-import com.example.darts.engine.Multiplier
 import com.example.darts.engine.Turn
 import com.example.darts.ui.screens.score_entry.EntryMethod
 import com.example.darts.utils.SoundManager
@@ -26,6 +24,7 @@ import com.example.darts.viewModel.states.PlayerStateX01
 import com.example.darts.viewModel.states.StatRow
 import com.example.darts.viewModel.states.TurnDisplayState
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -40,7 +39,8 @@ class GameViewModelX01 @Inject constructor(
     private val battleRepository: BattleRepository,
     private val momentRepository: MomentRepository,
     private val soundManager: SoundManager,
-    private val statRepository: StatRepository
+    private val statRepository: StatRepository,
+    private val settingsRepository: SettingsRepository // Injected properly
 ) : ViewModel(), BaseGameViewModel {
 
     private val _navigationEvents = MutableSharedFlow<GameNavigationEvent>()
@@ -49,23 +49,17 @@ class GameViewModelX01 @Inject constructor(
     private val _turnHistory = MutableStateFlow<List<TurnSummary>>(emptyList())
     override val turnHistory: StateFlow<List<TurnSummary>> = _turnHistory.asStateFlow()
 
-    override fun consumeNavigationEvent() {
-
-    }
+    override fun consumeNavigationEvent() {}
 
     private var isInitialized = false
-
     private lateinit var engine: GameEngineX01
     private var gameId: Int = -1
+
+    // REMOVED: init block and local variable tracking to completely avoid out-of-sync states.
 
     fun startGame(players: List<PlayerStateX01>, target: Int = 501, doubleOut: Boolean = false, masterIn: Boolean = false, maxLegs: Int = 3) {
         engine = GameEngineX01(players, target, doubleOut, masterIn, maxLegs)
         refresh()
-
-        viewModelScope.launch {
-            kotlinx.coroutines.delay(200)
-            soundManager.playGameOn()
-        }
     }
 
     override fun loadGame(gameId: Int, maxLegs: Int, config: GameConfig) {
@@ -78,7 +72,21 @@ class GameViewModelX01 @Inject constructor(
         viewModelScope.launch {
             val game = gameRepository.getGameById(gameId) ?: return@launch
             val players = battleRepository.getPlayersOfBattle(game.idBattle)
-            val playerStates = players.map { PlayerStateX01(it) }
+
+            val orderedPlayers = when {
+                cfg.startingPlayerId == -1 -> players.shuffled()
+                cfg.startingPlayerId > 0 -> {
+                    val startIndex = players.indexOfFirst { it.idPlayer == cfg.startingPlayerId }
+                    if (startIndex != -1) {
+                        players.subList(startIndex, players.size) + players.subList(0, startIndex)
+                    } else {
+                        players
+                    }
+                }
+                else -> players
+            }
+            val playerStates = orderedPlayers.map { PlayerStateX01(it) }
+
             startGame(
                 players = playerStates,
                 target = cfg.target,
@@ -86,6 +94,11 @@ class GameViewModelX01 @Inject constructor(
                 masterIn = cfg.masterIn,
                 maxLegs = maxLegs
             )
+
+            if (settingsRepository.isSoundEffects()) {
+                delay(600)
+                soundManager.playGameOn()
+            }
         }
 
         _turnHistory.value = emptyList()
@@ -121,9 +134,6 @@ class GameViewModelX01 @Inject constructor(
         if (currentDarts.size >= 3 || _displayState.value.isFinished) return
         currentDarts.add(dart)
 
-        // Bug fix: derive remaining directly from the engine's authoritative score,
-        // not from the display-state snapshot. The snapshot already has previous darts
-        // subtracted, so using it as a base would double-count them on dart 2 and 3.
         val engineState = engine.getState()
         val currentScore = engineState.playerStates[engineState.currPlayer].score
         val newTotal = currentDarts.sumOf { it.score() }
@@ -161,10 +171,6 @@ class GameViewModelX01 @Inject constructor(
         val remaining    = preTurnState.playerStates[preTurnState.currPlayer].score - turnScore
         val isBust       = remaining < 0 || (remaining == 1 && engine.doubleOut)
 
-        // Bug fix: do NOT pad to 3 darts. Padding caused the engine to count every
-        // turn as exactly 3 darts thrown (corrupting averages), and broke undo —
-        // dropLast(1) on a padded list removed the padding instead of the real
-        // checkout dart. Submit only the darts that were actually thrown.
         val newState = engine.submitTurn(Turn(currentDarts.toList()))
 
         _turnHistory.value = engine.turnHistory.mapIndexed { index, t ->
@@ -173,23 +179,24 @@ class GameViewModelX01 @Inject constructor(
                 playerName    = preTurnState.playerStates[index % preTurnState.playerStates.size].player.username,
                 dartDisplays  = t.darts.map { it.displayString() },
                 turnScore     = t.darts.sumOf { it.score() },
-                remainingAfter = remaining      // null if Cricket
+                remainingAfter = remaining
             )
         }
 
         currentDarts.clear()
         refresh()
 
-        // ── Persist stats whenever a leg ends ────────────────────────────
         if (newState.legJustCompleted) {
             persistLegStats(newState)
         }
 
-        // ── Sounds ───────────────────────────────────────────────────────
-        when {
-            newState.isFinished -> soundManager.playGameShot()
-            isBust              -> soundManager.playScore(0)
-            else                -> soundManager.playScore(turnScore)
+        // FIX: Synchronously evaluate the repository state right before audio trigger
+        if (settingsRepository.isSoundEffects()) {
+            when {
+                newState.isFinished -> soundManager.playGameShot()
+                isBust              -> soundManager.playScore(0)
+                else                -> soundManager.playScore(turnScore)
+            }
         }
     }
 
@@ -229,7 +236,6 @@ class GameViewModelX01 @Inject constructor(
 
             if (newState.isFinished) {
                 gameRepository.markGameFinished(gameId)
-
                 _navigationEvents.emit(GameNavigationEvent.MatchSummary(gameId))
             } else {
                 val showLegSummary = true
@@ -242,7 +248,6 @@ class GameViewModelX01 @Inject constructor(
                     )
                 }
             }
-
         }
     }
 
@@ -254,7 +259,6 @@ class GameViewModelX01 @Inject constructor(
     override fun setEntryMethod(method: EntryMethod) {
         _entryMethod.value = method
     }
-
 
     private fun refresh() {
         val engineState   = engine.getState()

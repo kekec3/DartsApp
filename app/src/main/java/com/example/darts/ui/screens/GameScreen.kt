@@ -22,6 +22,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.darts.ui.screens.MomentScreen
+import com.example.darts.ui.screens.SettingsScreen
 import com.example.darts.ui.screens.TurnHistoryScreen
 import com.example.darts.ui.screens.score_entry.CameraArRecommendationScreen
 import com.example.darts.ui.screens.score_entry.ArrowIndicator
@@ -39,6 +40,7 @@ import com.example.darts.viewModel.GameNavigationEvent
 import com.example.darts.viewModel.states.DartSlotState
 import com.example.darts.viewModel.states.PlayerDisplayState
 import com.example.darts.viewModel.states.TurnDisplayState
+import kotlinx.coroutines.launch
 
 // ── Shared colour palette ──────────────────────────────────────────────────────
 val ScreenBg       = Color(0xFF0B0F0C)   // BlackPrimary from theme
@@ -59,10 +61,13 @@ fun GameScreen(
     onLegSummary: (Int, Int) -> Unit,
     onMatchSummary: (Int) -> Unit
 ) {
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
     val state  by viewModel.displayState.collectAsState()
     val method by viewModel.activeEntryMethod.collectAsState()
     var showArOverlay by remember { mutableStateOf(false) }
     var showTurnHistory by remember {mutableStateOf(false)}
+    var showSettingsOverlay by remember { mutableStateOf(false) }
     val history by viewModel.turnHistory.collectAsState()
 
 
@@ -100,7 +105,8 @@ fun GameScreen(
                 title   = state.gameTitle,
                 onBack  = onNavigateBack,
                 onStats = { showTurnHistory = true },
-                onToggleAr = { showArOverlay = true }
+                onToggleAr = { showArOverlay = true },
+                onSettings = { showSettingsOverlay = true }
             )
 
             // ── Player cards ──────────────────────────────────────────────────
@@ -228,17 +234,50 @@ fun GameScreen(
             }
         }
 
-        if (showTurnHistory) {
-            AnimatedVisibility(
-                visible      = showTurnHistory,
-                enter        = slideInVertically { it },
-                exit         = slideOutVertically { it }
-            ) {
-                TurnHistoryScreen(
-                    turns   = history,
-                    onClose = { showTurnHistory = false }
-                )
-            }        }
+
+        AnimatedVisibility(
+            visible      = showTurnHistory,
+            enter        = slideInVertically { it },
+            exit         = slideOutVertically { it }
+        ) {
+            TurnHistoryScreen(
+                turns   = history,
+                onClose = { showTurnHistory = false }
+            )
+        }
+
+
+        AnimatedVisibility(
+            visible = showSettingsOverlay,
+            enter = slideInVertically(initialOffsetY = { it }),
+            exit = slideOutVertically(targetOffsetY = { it })
+        ) {
+            SettingsScreen(
+                modifier = Modifier.fillMaxSize(),
+                onBack = { showSettingsOverlay = false },
+                onImportData = {
+                    scope.launch {
+                        snackbarHostState.showSnackbar(
+                            message = "Import is unavailable during the game",
+                            duration = SnackbarDuration.Short
+                        )
+                    }               }
+            )
+        }
+
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 16.dp)
+        ) { data ->
+            Snackbar(
+                containerColor = Color(0xFF1A201B), // Matches your CardInactive
+                contentColor = Color.White,
+                shape = RoundedCornerShape(12.dp),
+                snackbarData = data
+            )
+        }
     }
 }
 
@@ -249,7 +288,8 @@ private fun GameTopBar(
     title: String,
     onBack: () -> Unit,
     onStats: () -> Unit,
-    onToggleAr: () -> Unit
+    onToggleAr: () -> Unit,
+    onSettings: () -> Unit,
 ) {
     Row(
         modifier          = Modifier
@@ -274,7 +314,7 @@ private fun GameTopBar(
         IconButton(onClick = onStats) {
             Icon(Icons.Default.TrendingUp, "Stats", tint = HeaderWhite)
         }
-        IconButton(onClick = {}) {
+        IconButton(onClick = onSettings) {
             Icon(Icons.Default.Settings, "Settings", tint = HeaderWhite)
         }
     }
