@@ -66,15 +66,19 @@ class GameSharingViewModel @Inject constructor(
             try {
                 val fullPayload = repository.exportPlayerToCompressedFileString(player.idPlayer)
 
+                // 1. Generate a high-entropy, short dynamic token
+                val randomToken = "DARTS_${java.util.UUID.randomUUID().toString().take(6).uppercase()}"
+
                 if (nearbyManager == null) nearbyManager = NearbyManager(context)
 
-                nearbyManager?.startAdvertising(fullPayload) { status ->
+                // 2. Advertise using the dynamic token
+                nearbyManager?.startAdvertising(randomToken, fullPayload) { status ->
                     viewModelScope.launch { _uiEvents.send(ShareUiEvent.ShowToast(status)) }
                 }
 
-                // QR now displays a static token that triggers discovery on the receiver side
+                // 3. Update the QR code payload to display this token
                 _screenState.update {
-                    it.copy(qrPayload = "DARTS_SESSION_TOKEN", isGeneratingQr = false)
+                    it.copy(qrPayload = randomToken, isGeneratingQr = false)
                 }
 
             } catch (e: Exception) {
