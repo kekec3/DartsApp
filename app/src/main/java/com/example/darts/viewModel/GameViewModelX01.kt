@@ -23,6 +23,7 @@ import com.example.darts.viewModel.states.PlayerDisplayState
 import com.example.darts.viewModel.states.PlayerStateX01
 import com.example.darts.viewModel.states.StatRow
 import com.example.darts.viewModel.states.TurnDisplayState
+import com.google.gson.Gson
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -108,7 +109,8 @@ class GameViewModelX01 @Inject constructor(
         viewModelScope.launch {
             Log.d("MomentCapture", "Capturing $type with value: $contentValue for gameId: $gameId")
             if (gameId != -1) {
-                momentRepository.saveMoment(Moment(idGame = gameId, type = type, contentValue = contentValue))
+                val currentTurn = _turnHistory.value.size + 1
+                momentRepository.saveMoment(Moment(idGame = gameId, type = type, contentValue = contentValue, turnNumber = currentTurn))
             } else {
                 Log.e("MomentCapture", "GameId is -1! Could not save moment.")
             }
@@ -235,6 +237,8 @@ class GameViewModelX01 @Inject constructor(
             )
 
             if (newState.isFinished) {
+                val jsnoHistory = Gson().toJson(_turnHistory.value)
+                gameRepository.saveGameHistory(gameId, jsnoHistory)
                 gameRepository.markGameFinished(gameId)
                 _navigationEvents.emit(GameNavigationEvent.MatchSummary(gameId))
             } else {

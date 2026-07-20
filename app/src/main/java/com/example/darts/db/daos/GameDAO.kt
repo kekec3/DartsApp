@@ -33,4 +33,7 @@ interface GameDAO {
 
     @Query("DELETE FROM games WHERE finished = 0")
     suspend fun deleteUnfinishedGames()
+
+    @Query("UPDATE games SET history = :json WHERE idGame = :gameId")
+    suspend fun updateHistory(gameId: Int, json: String)
 }

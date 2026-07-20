@@ -38,4 +38,8 @@ class GameRepository @Inject constructor(
     suspend fun cleanupUnfinishedGames() {
         gameDAO.deleteUnfinishedGames()
     }
+
+    suspend fun saveGameHistory(gameId: Int, json: String) {
+        gameDAO.updateHistory(gameId, json)
+    }
 }

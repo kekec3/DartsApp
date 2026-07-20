@@ -36,5 +36,6 @@ data class Moment (
     @PrimaryKey(autoGenerate = true) val idMoment: Int = 0,
     @ColumnInfo(name = "idGame") val idGame: Int,
     @ColumnInfo(name = "type") val type: MomentType,
-    @ColumnInfo(name = "contentValue") val contentValue: String
+    @ColumnInfo(name = "contentValue") val contentValue: String,
+    @ColumnInfo(name = "turnNumber") val turnNumber: Int = 0
 )

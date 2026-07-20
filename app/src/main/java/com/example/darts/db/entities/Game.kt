@@ -26,5 +26,6 @@ data class Game (
     @ColumnInfo(name = "location") val location: String,
     @ColumnInfo(name = "duration") val duration: Long,
     @ColumnInfo(name = "type") val type: String,
-    @ColumnInfo(name = "finished") val finished: Boolean = false
+    @ColumnInfo(name = "finished") val finished: Boolean = false,
+    @ColumnInfo(name = "history") val history: String? = null
 )
