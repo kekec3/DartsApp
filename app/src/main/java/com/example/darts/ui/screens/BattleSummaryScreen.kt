@@ -7,8 +7,8 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -18,84 +18,106 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import com.example.darts.viewModel.GameMode
-import com.example.darts.viewModel.MatchPlayerStats
-import com.example.darts.viewModel.MatchSummaryViewModel
+import com.example.darts.viewModel.BattlePlayerStats
+import com.example.darts.viewModel.BattleSummaryViewModel
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MatchSummaryScreen(
+fun BattleSummaryScreen(
     modifier: Modifier = Modifier,
-    gameId: Int,
-    onBack: () -> Unit,
+    battleId: Int,
     onNavigateHome: () -> Unit = {},
-    viewModel: MatchSummaryViewModel = hiltViewModel()
+    viewModel: BattleSummaryViewModel = hiltViewModel()
 ) {
-    LaunchedEffect(gameId) {
-        viewModel.load(gameId)
+    LaunchedEffect(battleId) {
+        viewModel.load(battleId)
     }
 
     val state by viewModel.uiState.collectAsState()
-    val isCricket = state.gameMode == GameMode.CRICKET
-    val winner = state.players.firstOrNull()
 
     Column(
         modifier = modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
+        CenterAlignedTopAppBar(
+            title = { Text("Battle Overview", fontWeight = FontWeight.Bold) },
+            colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                containerColor = MaterialTheme.colorScheme.background
+            )
+        )
+
         Column(
             modifier = Modifier
                 .weight(1f)
-                .padding(20.dp),
+                .padding(horizontal = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Trophy / Star Icon
-            Surface(
-                modifier = Modifier.size(90.dp),
-                shape = CircleShape,
-                color = Color(0xFF1B5E20)
+            // Main Battle Champion Banner
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E1E))
             ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = Icons.Default.Star,
-                        contentDescription = "Winner",
-                        modifier = Modifier.size(50.dp),
-                        tint = Color(0xFF76B947)
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(20.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Surface(
+                        modifier = Modifier.size(72.dp),
+                        shape = CircleShape,
+                        color = Color(0xFF1B5E20)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Default.EmojiEvents,
+                                contentDescription = "Battle Champion",
+                                modifier = Modifier.size(44.dp),
+                                tint = Color(0xFF76B947)
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Text(
+                        text = if (state.winnerName.isNotEmpty()) "${state.winnerName} Wins the Battle!" else "Battle Complete",
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = Color.White,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Text(
+                        text = "${state.totalMatchesPlayed} Total Matches Played",
+                        color = Color.Gray,
+                        fontSize = 14.sp,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 4.dp)
                     )
                 }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            Text(
-                text = "${winner?.playerName ?: "Player"} Wins!",
-                fontSize = 28.sp,
-                fontWeight = FontWeight.ExtraBold,
-                color = Color.White
-            )
-
-            Text(
-                text = if (isCricket) "Cricket Match Summary" else "X01 Match Summary",
-                fontSize = 14.sp,
-                color = Color.Gray,
-                modifier = Modifier.padding(top = 4.dp, bottom = 20.dp)
-            )
-
-            // Players Leaderboard List
+            // Ranked Multi-Player Battle Leaderboard
             LazyColumn(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 itemsIndexed(state.players) { index, playerStats ->
-                    MatchPlayerCard(
+                    BattlePlayerCard(
                         rank = index + 1,
-                        playerStats = playerStats,
-                        isCricket = isCricket
+                        playerStats = playerStats
                     )
                 }
             }
@@ -117,7 +139,7 @@ fun MatchSummaryScreen(
                     Text(
                         "BACK TO HOME",
                         color = Color.Black,
-                        fontWeight = FontWeight.Bold,
+                        fontWeight = FontWeight.ExtraBold,
                         fontSize = 16.sp
                     )
                 }
@@ -127,10 +149,9 @@ fun MatchSummaryScreen(
 }
 
 @Composable
-fun MatchPlayerCard(
+fun BattlePlayerCard(
     rank: Int,
-    playerStats: MatchPlayerStats,
-    isCricket: Boolean
+    playerStats: BattlePlayerStats
 ) {
     val rankColor = when (rank) {
         1 -> Color(0xFF76B947)
@@ -170,13 +191,13 @@ fun MatchPlayerCard(
 
                 Surface(
                     shape = RoundedCornerShape(8.dp),
-                    color = Color(0xFF2A302A)
+                    color = Color(0xFF76B947)
                 ) {
                     Text(
-                        text = "${playerStats.legsWon} ${if (playerStats.legsWon == 1) "Leg" else "Legs"}",
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 13.sp,
+                        text = "${playerStats.matchesWon} ${if (playerStats.matchesWon == 1) "Match Win" else "Match Wins"}",
+                        color = Color.Black,
+                        fontWeight = FontWeight.ExtraBold,
+                        fontSize = 12.sp,
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
                     )
                 }
@@ -187,33 +208,22 @@ fun MatchPlayerCard(
                 color = Color(0xFF2A2F2A)
             )
 
-            if (isCricket) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceAround
-                ) {
-                    MatchStatTile(label = "MPR", value = "%.2f".format(playerStats.average))
-                    MatchStatTile(label = "Legs Won", value = "${playerStats.legsWon}")
-                }
-            } else {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    MatchStatTile(label = "3-Dart Avg", value = "%.2f".format(playerStats.average))
-                    MatchStatTile(label = "Checkout %", value = "%.1f%%".format(playerStats.checkoutPercent))
-                    MatchStatTile(label = "High Checkout", value = "${playerStats.highestCheckout}")
-                    MatchStatTile(label = "180s", value = "${playerStats.scores180}")
-                }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceAround
+            ) {
+                BattleStatTile(label = "Matches Won", value = "${playerStats.matchesWon}")
+                BattleStatTile(label = "Total Legs Won", value = "${playerStats.totalLegsWon}")
+                BattleStatTile(label = "Overall Avg", value = "%.2f".format(playerStats.overallAverage))
             }
         }
     }
 }
 
 @Composable
-private fun MatchStatTile(label: String, value: String) {
+private fun BattleStatTile(label: String, value: String) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(text = label, fontSize = 11.sp, color = Color.Gray)
-        Text(text = value, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color.White)
+        Text(text = value, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
     }
 }

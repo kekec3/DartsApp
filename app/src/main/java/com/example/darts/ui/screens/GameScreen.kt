@@ -7,6 +7,9 @@ import androidx.annotation.RequiresApi
 import androidx.compose.animation.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -367,15 +370,40 @@ private fun PlayerRowBig(
     players: List<PlayerDisplayState>,
     modifier: Modifier = Modifier
 ) {
-    Row(
-        modifier              = modifier,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        players.forEach { player ->
-            PlayerCardMinimal(
-                player   = player,
-                modifier = Modifier.weight(1f)
-            )
+    if (players.size <= 2) {
+        Row(
+            modifier = modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            players.forEach { player ->
+                PlayerCardMinimal(
+                    player = player,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+    } else {
+        val listState = rememberLazyListState()
+        val activeIndex = remember(players) {
+            players.indexOfFirst { it.isCurrent }.takeIf { it >= 0 } ?: 0
+        }
+
+        // Auto-scroll to active player whenever turn changes
+        LaunchedEffect(activeIndex) {
+            listState.animateScrollToItem(activeIndex)
+        }
+
+        LazyRow(
+            state = listState,
+            modifier = modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            items(players, key = { it.id }) { player ->
+                PlayerCardMinimal(
+                    player = player,
+                    modifier = Modifier.width(175.dp) // Slightly wider card for better visibility
+                )
+            }
         }
     }
 }

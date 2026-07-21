@@ -114,10 +114,8 @@ fun DartsNavGraph(
                 battleId = args.battleId,
                 viewModel = hiltViewModel(),
                 onNewGame = { navController.navigate(GameSettingsRoute(battleId = args.battleId)) },
-                onLegSummary = { gameId, legNumber ->
-                    navController.navigate(
-                        LegSummaryRoute(gameId = gameId, legNumber = legNumber)
-                    )
+                onBattleSummary = { battleId ->
+                    navController.navigate(BattleSummaryRoute(battleId = battleId))
                 },
                 onMatchSummary = { gameId ->
                     navController.navigate(MatchSummaryRoute(gameId))
@@ -242,6 +240,18 @@ fun DartsNavGraph(
             MatchSummaryScreen(
                 gameId = args.gameId,
                 onBack = { navController.popBackStack() },
+                onNavigateHome = {
+                    navController.navigate(HomeRoute) {
+                        popUpTo<HomeRoute>()
+                    }
+                }
+            )
+        }
+
+        composable<BattleSummaryRoute> { backStackEntry ->
+            val args: BattleSummaryRoute = backStackEntry.toRoute()
+            BattleSummaryScreen(
+                battleId = args.battleId,
                 onNavigateHome = {
                     navController.navigate(HomeRoute) {
                         popUpTo<HomeRoute>()

@@ -42,6 +42,7 @@ data class CricketGameRoute(
 @Serializable data class GameCreateScreenRoute(val battleId: Int)
 @Serializable data class LegSummaryRoute(val gameId: Int, val legNumber: Int)
 @Serializable data class MatchSummaryRoute(val gameId: Int)
+@Serializable data class BattleSummaryRoute(val battleId: Int)
 @Serializable data class PlayersRoute(val isSelection: Boolean = false)
 @Serializable data class PlayerStatsRoute(val playerId: Int, val playerName: String)
 @Serializable data class GameTimelineRoute(val gameId: Int)
