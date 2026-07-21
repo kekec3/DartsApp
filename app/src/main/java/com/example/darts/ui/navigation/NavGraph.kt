@@ -59,7 +59,7 @@ fun DartsNavGraph(
                 onViewPlayers = { navController.navigate(PlayersRoute(isSelection = false)) },
                 onViewStats = { navController.navigate(StatsRoute) },
                 onViewSettings = {navController.navigate(SettingsRoute)},
-                onViewMap = {navController.navigate(MapRoute())}
+                onViewMap = {navController.navigate(MapRoute(null))}
             )
         }
 
@@ -179,7 +179,9 @@ fun DartsNavGraph(
                 },
                 onMatchSummary = { gameId ->
                     viewModel.consumeNavigationEvent()
-                    navController.navigate(MatchSummaryRoute(gameId))
+                    navController.navigate(MatchSummaryRoute(gameId)) {
+                        popUpTo<GameCreateScreenRoute>()
+                    }
                 },
                 onNavigateBack = {
                     val gameRepository = viewModel.getGameRepository()
@@ -212,7 +214,9 @@ fun DartsNavGraph(
                 },
                 onMatchSummary = { gameId ->
                     viewModel.consumeNavigationEvent()
-                    navController.navigate(MatchSummaryRoute(gameId))
+                    navController.navigate(MatchSummaryRoute(gameId)) {
+                        popUpTo<GameCreateScreenRoute>()
+                    }
                 },
                 onNavigateBack = {
                     val gameRepository = viewModel.getGameRepository()
@@ -239,7 +243,12 @@ fun DartsNavGraph(
             val args: MatchSummaryRoute = backStackEntry.toRoute()
             MatchSummaryScreen(
                 gameId = args.gameId,
-                onBack = { navController.popBackStack() },
+                onBack = {
+                    val poppedToLobby = navController.popBackStack<GameCreateScreenRoute>(inclusive = false)
+                    if (!poppedToLobby) {
+                        navController.popBackStack()
+                    }
+                },
                 onNavigateHome = {
                     navController.navigate(HomeRoute) {
                         popUpTo<HomeRoute>()

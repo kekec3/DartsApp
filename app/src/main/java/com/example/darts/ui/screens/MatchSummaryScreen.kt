@@ -1,5 +1,6 @@
 package com.example.darts.ui.screens
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -7,6 +8,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
@@ -14,6 +16,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -25,6 +30,7 @@ import com.example.darts.viewModel.GameMode
 import com.example.darts.viewModel.MatchPlayerStats
 import com.example.darts.viewModel.MatchSummaryViewModel
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MatchSummaryScreen(
     modifier: Modifier = Modifier,
@@ -41,11 +47,31 @@ fun MatchSummaryScreen(
     val isCricket = state.gameMode == GameMode.CRICKET
     val winner = state.players.firstOrNull()
 
+    BackHandler {
+        onBack()
+    }
+
     Column(
         modifier = modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
+        CenterAlignedTopAppBar(
+            title = { Text("Match Summary", fontWeight = FontWeight.Bold, color = Color.White) },
+            navigationIcon = {
+                IconButton(onClick = onBack) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Back to Match Lobby",
+                        tint = Color.White
+                    )
+                }
+            },
+            colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                containerColor = MaterialTheme.colorScheme.background
+            )
+        )
+
         Column(
             modifier = Modifier
                 .weight(1f)
