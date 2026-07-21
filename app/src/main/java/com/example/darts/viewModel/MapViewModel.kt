@@ -19,6 +19,7 @@ class MapViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val repository: GameRepository
 ) : ViewModel() {
+
     private val mapRoute = savedStateHandle.toRoute<MapRoute>()
 
     private val _games = MutableStateFlow<List<Game>>(emptyList())
@@ -32,12 +33,17 @@ class MapViewModel @Inject constructor(
         viewModelScope.launch {
             val battleId = mapRoute.battleId
 
-            // Ako nema battleId-ja, učitaj sve. Ako ima, učitaj samo za tu bitku.
-            _games.value = (if (battleId == null) {
+            // 1. Dobijamo Flow iz repozitorijuma
+            val gamesFlow = if (battleId == null) {
                 repository.getAllGames()
             } else {
                 repository.getGamesByBattle(battleId)
-            }) as List<Game>
+            }
+
+            // 2. Skupljamo (collect) podatke iz Flow-a i stavljamo ih u _games
+            gamesFlow.collect { gamesList ->
+                _games.value = gamesList
+            }
         }
     }
 }

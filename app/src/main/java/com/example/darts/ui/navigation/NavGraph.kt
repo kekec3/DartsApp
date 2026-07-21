@@ -74,7 +74,7 @@ fun DartsNavGraph(
             )
         }
         composable<MapRoute> {
-            val viewModel: MapViewModel = hiltViewModel() // ili koinViewModel()
+            val viewModel: MapViewModel = hiltViewModel()
             val games by viewModel.games.collectAsState()
 
             MapScreen(games = games)
