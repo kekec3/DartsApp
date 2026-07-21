@@ -170,7 +170,8 @@ fun DartsNavGraph(
                 onMatchSummary = { gameId ->
                     viewModel.consumeNavigationEvent()
                     navController.navigate(MatchSummaryRoute(gameId))
-                }
+                },
+
             )
         }
 
