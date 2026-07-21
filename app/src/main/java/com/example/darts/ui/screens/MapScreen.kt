@@ -10,11 +10,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext // 👈 DODOAT IMPORT
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.darts.db.entities.Game
 import com.google.android.gms.maps.CameraUpdateFactory
+import com.google.android.gms.maps.MapsInitializer // 👈 DODAT IMPORT
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
@@ -36,7 +38,6 @@ private val markerHues = listOf(
     BitmapDescriptorFactory.HUE_MAGENTA
 )
 
-// ── Osigurava bezbednu boju čak i ako je battleId negativan ili null ────────
 private fun getHueForBattle(battleId: Int?): Float {
     if (battleId == null) return BitmapDescriptorFactory.HUE_GREEN
     val safeIndex = abs(battleId) % markerHues.size
@@ -49,7 +50,14 @@ fun MapScreen(
     games: List<Game>,
     modifier: Modifier = Modifier
 ) {
-    // 1. Bezbedno konvertovanje lokacija (ruši se ako je string null ili loše formatiran)
+    val context = LocalContext.current
+
+    // 0. Eksplicitna inicijalizacija Maps SDK-a kako CameraUpdateFactory ne bi bio null
+    LaunchedEffect(Unit) {
+        MapsInitializer.initialize(context)
+    }
+
+    // 1. Bezbedno konvertovanje lokacija
     val gamePoints = remember(games) {
         games.mapNotNull { game ->
             val rawLocation = game.location ?: return@mapNotNull null
@@ -67,21 +75,22 @@ fun MapScreen(
     // 2. Pamti izabranu igru
     var selectedGame by remember { mutableStateOf<Game?>(null) }
 
-    // Kada podaci sa Home ekrana stignu iz baze, selektuj prvu igru
     LaunchedEffect(gamePoints) {
         if (selectedGame == null && gamePoints.isNotEmpty()) {
             selectedGame = gamePoints.first().second
         }
     }
 
-    // 3. Početna pozicija kamere (Default Beograd ako nema igara)
+    // 3. Početna pozicija kamere
     val cameraPositionState = rememberCameraPositionState {
         position = CameraPosition.fromLatLngZoom(LatLng(44.8061, 20.4761), 12f)
     }
 
-    // Animira kameru na prvu igru čim se podaci učitaju sa Home ekrana
+    // Animira kameru na prvu igru čim se podaci učitaju
     LaunchedEffect(gamePoints) {
         if (gamePoints.isNotEmpty()) {
+            // Osiguravamo inicijalizaciju pre poziva CameraUpdateFactory
+            MapsInitializer.initialize(context)
             cameraPositionState.animate(
                 CameraUpdateFactory.newLatLngZoom(gamePoints.first().first, 12f)
             )
@@ -99,7 +108,7 @@ fun MapScreen(
                 zoomControlsEnabled = false,
                 myLocationButtonEnabled = true
             ),
-            onMapClick = { selectedGame = null } // Sakrij karticu na klik van markera
+            onMapClick = { selectedGame = null }
         ) {
             gamePoints.forEach { (point, game) ->
                 val markerColor = getHueForBattle(game.idBattle)
