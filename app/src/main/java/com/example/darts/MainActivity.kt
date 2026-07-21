@@ -33,6 +33,7 @@ import com.example.darts.ui.theme.DartsTheme
 import dagger.hilt.android.AndroidEntryPoint
 import com.example.darts.ui.navigation.HomeRoute
 import com.example.darts.ui.navigation.BattlesRoute
+import com.example.darts.ui.navigation.GameSharingRoute
 import com.example.darts.ui.navigation.PlayersRoute
 import com.example.darts.ui.navigation.StatsRoute
 import com.example.darts.viewModel.GameImportViewModel
@@ -83,7 +84,8 @@ class MainActivity : ComponentActivity() {
                 val showBottomBar = currentDestination?.hasRoute<HomeRoute>() == true ||
                         currentDestination?.hasRoute<BattlesRoute>() == true ||
                         currentDestination?.hasRoute<PlayersRoute>() == true ||
-                        currentDestination?.hasRoute<StatsRoute>() == true
+                        currentDestination?.hasRoute<StatsRoute>() == true ||
+                        currentDestination?.hasRoute<GameSharingRoute>() == true
 
                 Scaffold(
                     modifier = Modifier.fillMaxSize(),
