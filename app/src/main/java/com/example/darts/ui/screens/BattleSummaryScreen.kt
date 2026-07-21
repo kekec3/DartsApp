@@ -9,6 +9,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.KeyboardArrowLeft
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -30,6 +31,7 @@ import com.example.darts.viewModel.BattleSummaryViewModel
 fun BattleSummaryScreen(
     modifier: Modifier = Modifier,
     battleId: Int,
+    onBack: () -> Unit = {},
     onNavigateHome: () -> Unit = {},
     viewModel: BattleSummaryViewModel = hiltViewModel()
 ) {
@@ -46,6 +48,16 @@ fun BattleSummaryScreen(
     ) {
         CenterAlignedTopAppBar(
             title = { Text("Battle Overview", fontWeight = FontWeight.Bold) },
+            navigationIcon = {
+                IconButton(onClick = onBack) {
+                    Icon(
+                        imageVector = Icons.Default.KeyboardArrowLeft,
+                        contentDescription = "Back",
+                        tint = Color.White,
+                        modifier = Modifier.size(32.dp)
+                    )
+                }
+            },
             colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
                 containerColor = MaterialTheme.colorScheme.background
             )
