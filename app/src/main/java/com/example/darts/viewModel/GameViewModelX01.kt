@@ -56,8 +56,9 @@ class GameViewModelX01 @Inject constructor(
     private lateinit var engine: GameEngineX01
     private var gameId: Int = -1
 
-    // REMOVED: init block and local variable tracking to completely avoid out-of-sync states.
-
+    override fun getGameRepository(): GameRepository{
+        return gameRepository
+    }
     fun startGame(players: List<PlayerStateX01>, target: Int = 501, doubleOut: Boolean = false, masterIn: Boolean = false, maxLegs: Int = 3) {
         engine = GameEngineX01(players, target, doubleOut, masterIn, maxLegs)
         refresh()

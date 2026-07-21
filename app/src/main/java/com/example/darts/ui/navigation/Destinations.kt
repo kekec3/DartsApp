@@ -1,5 +1,6 @@
 package com.example.darts.ui.navigation
 
+import com.example.darts.db.entities.Game
 import kotlinx.serialization.Serializable
 
 @Serializable object SplashRoute
@@ -23,6 +24,11 @@ data class X01GameRoute(
     val masterIn: Boolean = false,
     val startingPlayerId: Int = -1
 ) : GameRoute
+
+@Serializable
+data class MapRoute(
+    val battleId: Int? = null
+)
 
 @Serializable
 data class CricketGameRoute(

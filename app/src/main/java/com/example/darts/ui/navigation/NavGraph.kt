@@ -12,6 +12,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
+import com.example.darts.db.entities.Game
 import com.example.darts.ui.GameScreen
 import com.example.darts.ui.screens.*
 import com.example.darts.viewModel.BaseGameViewModel
@@ -20,7 +21,11 @@ import com.example.darts.viewModel.GameImportViewModel
 import com.example.darts.viewModel.GameSharingViewModel
 import com.example.darts.viewModel.GameViewModelCricket
 import com.example.darts.viewModel.GameViewModelX01
+import com.example.darts.viewModel.MapViewModel
 import com.example.darts.viewModel.XO1Config
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
@@ -53,7 +58,8 @@ fun DartsNavGraph(
                 onViewMoments = { navController.navigate(MomentsGalleryRoute) },
                 onViewPlayers = { navController.navigate(PlayersRoute(isSelection = false)) },
                 onViewStats = { navController.navigate(StatsRoute) },
-                onViewSettings = {navController.navigate(SettingsRoute)}
+                onViewSettings = {navController.navigate(SettingsRoute)},
+                onViewMap = {navController.navigate(MapRoute())}
             )
         }
 
@@ -66,6 +72,12 @@ fun DartsNavGraph(
                 },
                 addBattle = { navController.navigate(PlayersRoute(isSelection = true)) }
             )
+        }
+        composable<MapRoute> {
+            val viewModel: MapViewModel = hiltViewModel() // ili koinViewModel()
+            val games by viewModel.games.collectAsState()
+
+            MapScreen(games = games)
         }
 
         // 3. Players Screen
@@ -171,6 +183,13 @@ fun DartsNavGraph(
                     viewModel.consumeNavigationEvent()
                     navController.navigate(MatchSummaryRoute(gameId))
                 },
+                onNavigateBack = {
+                    val gameRepository = viewModel.getGameRepository()
+                    CoroutineScope(Dispatchers.IO).launch {
+                        gameRepository.cleanupUnfinishedGames()
+                    }
+                    navController.navigate(HomeRoute)
+                }
 
             )
         }
@@ -196,6 +215,13 @@ fun DartsNavGraph(
                 onMatchSummary = { gameId ->
                     viewModel.consumeNavigationEvent()
                     navController.navigate(MatchSummaryRoute(gameId))
+                },
+                onNavigateBack = {
+                    val gameRepository = viewModel.getGameRepository()
+                    CoroutineScope(Dispatchers.IO).launch {
+                        gameRepository.cleanupUnfinishedGames()
+                    }
+                    navController.navigate(HomeRoute)
                 }
             )
         }

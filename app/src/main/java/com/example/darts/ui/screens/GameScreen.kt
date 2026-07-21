@@ -87,7 +87,7 @@ fun GameScreen(
             },
             text = {
                 Text(
-                    text = "Da li želite da napustite igru? Napredak neće biti sačuvan.",
+                    text = "Do you want to exit the game? Progress will not be saved.",
                     color = TextSecondary
                 )
             },
@@ -98,12 +98,12 @@ fun GameScreen(
                         onNavigateBack() // Poziva navigaciju nazad
                     }
                 ) {
-                    Text("Izađi", color = TurnOrange, fontWeight = FontWeight.Bold)
+                    Text("Yes", color = TurnOrange, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showExitDialog = false }) {
-                    Text("Otkaži", color = HeaderWhite)
+                    Text("No", color = HeaderWhite)
                 }
             },
             containerColor = Color(0xFF1A201B), // Koristi tvoju tamnu boju iz teme

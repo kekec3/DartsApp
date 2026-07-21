@@ -1,6 +1,7 @@
 package com.example.darts.viewModel
 
 import com.example.darts.db.entities.MomentType
+import com.example.darts.db.repositories.GameRepository
 import com.example.darts.engine.DartThrow
 import com.example.darts.ui.screens.score_entry.EntryMethod
 import com.example.darts.viewModel.states.GameDisplayState
@@ -46,6 +47,8 @@ interface BaseGameViewModel {
     val navigationEvents: SharedFlow<GameNavigationEvent>
 
     fun consumeNavigationEvent()
+
+    fun getGameRepository() : GameRepository
 }
 
 sealed interface GameNavigationEvent {

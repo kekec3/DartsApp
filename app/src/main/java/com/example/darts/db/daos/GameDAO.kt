@@ -11,7 +11,7 @@ import kotlinx.coroutines.flow.Flow
 interface GameDAO {
 
     @Query("SELECT * FROM games")
-    fun getAllGames() : Flow<List<Game>>?
+    fun getAllGames() : Flow<List<Game>>
 
     @Query("SELECT * FROM games g JOIN participate p ON g.idBattle = p.idBattle WHERE p.idPlayer = :player")
     fun getAllGamesByPlayer(player: Int) : Flow<List<Game>>?

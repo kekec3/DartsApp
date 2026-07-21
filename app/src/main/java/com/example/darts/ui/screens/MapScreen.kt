@@ -20,6 +20,25 @@ import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.MapStyleOptions
 import com.google.maps.android.compose.*
 
+// ── Lista dostupnih boja za markere ──────────────────────────────────────────
+private val markerHues = listOf(
+    BitmapDescriptorFactory.HUE_RED,
+    BitmapDescriptorFactory.HUE_BLUE,
+    BitmapDescriptorFactory.HUE_GREEN,
+    BitmapDescriptorFactory.HUE_YELLOW,
+    BitmapDescriptorFactory.HUE_VIOLET,
+    BitmapDescriptorFactory.HUE_ORANGE,
+    BitmapDescriptorFactory.HUE_CYAN,
+    BitmapDescriptorFactory.HUE_ROSE,
+    BitmapDescriptorFactory.HUE_AZURE,
+    BitmapDescriptorFactory.HUE_MAGENTA
+)
+
+// ── Funkcija koja osigurava istu boju za isti battleId ─────────────────────
+private fun getHueForBattle(battleId: Int): Float {
+    return markerHues[kotlin.math.abs(battleId.hashCode()) % markerHues.size]
+}
+
 @SuppressLint("UnrememberedMutableState")
 @Composable
 fun MapScreen(
@@ -64,10 +83,15 @@ fun MapScreen(
             onMapClick = { selectedGame = null } // Hide card if clicking empty space
         ) {
             gamePoints.forEach { (point, game) ->
+
+                // NAPOMENA: Ovde zameni `game.battleId` sa pravim imenom property-ja iz tvoje baze
+                // Ako Game klasa nema battleId već neki drugi ID, stavi taj ID.
+                val markerColor = getHueForBattle(game.idBattle)
+
                 Marker(
                     state = MarkerState(position = point),
                     title = "Game #${game.idGame}",
-                    icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN),
+                    icon = BitmapDescriptorFactory.defaultMarker(markerColor),
                     onClick = {
                         selectedGame = game
                         false // Allow default camera pan behavior to center on the clicked marker
@@ -103,7 +127,7 @@ fun MapScreen(
             Card(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
-                    .padding(bottom = 100.dp, start = 16.dp, end = 16.dp) // Padded to sit above FAB
+                    .padding(bottom = 100.dp, start = 16.dp, end = 16.dp)
                     .fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(
@@ -125,7 +149,6 @@ fun MapScreen(
                             color = Color.Gray,
                             fontSize = 12.sp
                         )
-                        // REPLACED MOCK DATA WITH ACTUAL GAME LOCATION DATA
                         Text(
                             text = "Coords: ${game.location}",
                             color = Color(0xFF76B947),

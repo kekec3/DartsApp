@@ -68,6 +68,10 @@ class GameViewModelCricket @Inject constructor(
         refresh()
     }
 
+    override fun getGameRepository(): GameRepository{
+        return gameRepository
+    }
+
     override fun captureGameMoment(type: MomentType, contentValue: String) {
         viewModelScope.launch {
             Log.d("MomentCapture", "Capturing $type with value: $contentValue for gameId: $gameId")

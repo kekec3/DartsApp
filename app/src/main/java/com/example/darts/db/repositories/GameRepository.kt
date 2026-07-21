@@ -17,6 +17,10 @@ class GameRepository @Inject constructor(
         return gameDAO.getAllGamesByBattle(battleId)
     }
 
+    fun getAllGames(): Flow<List<Game>>{
+        return gameDAO.getAllGames()
+    }
+
     suspend fun createNewGame(game: Game): Int {
         return gameDAO.addGame(game).toInt()
     }
