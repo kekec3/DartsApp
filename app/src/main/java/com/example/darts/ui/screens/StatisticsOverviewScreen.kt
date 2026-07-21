@@ -2,6 +2,7 @@ package com.example.darts.ui.screens
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -9,10 +10,12 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -39,9 +42,23 @@ fun StatisticsOverviewScreen(
         if (playerId != -1) viewModel.load(playerId)
     }
 
+    val allPlayers by viewModel.allPlayers.collectAsState()
+    val selectedPlayer by viewModel.selectedPlayer.collectAsState()
     val career by viewModel.careerStats.collectAsState()
     val legTrend by viewModel.legTrend.collectAsState()
     val stats = career
+
+    // ── Dropdown & Search state ─────────────────────────────────────────────
+    var dropdownExpanded by remember { mutableStateOf(false) }
+    var searchQuery by remember { mutableStateOf("") }
+
+    val filteredPlayers = remember(allPlayers, searchQuery) {
+        if (searchQuery.isBlank()) {
+            allPlayers
+        } else {
+            allPlayers.filter { it.username.contains(searchQuery, ignoreCase = true) }
+        }
+    }
 
     // ── Derived values ──────────────────────────────────────────────────────
     val average = if ((stats?.totalDartsThrown ?: 0) > 0)
@@ -70,8 +87,83 @@ fun StatisticsOverviewScreen(
     ) {
         TopAppBar(
             title = {
-                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                    Text(playerName, fontWeight = FontWeight.Bold, color = Color.White)
+                Box(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    // Clickable Title with Down Arrow
+                    Row(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .clickable { dropdownExpanded = true }
+                            .padding(horizontal = 10.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Text(
+                            text = selectedPlayer?.username ?: playerName,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White,
+                            fontSize = 18.sp
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Icon(
+                            imageVector = Icons.Default.ArrowDropDown,
+                            contentDescription = "Select Player",
+                            tint = Color(0xFF76B947)
+                        )
+                    }
+
+                    // Dropdown menu embedded in top bar
+                    DropdownMenu(
+                        expanded = dropdownExpanded,
+                        onDismissRequest = {
+                            dropdownExpanded = false
+                            searchQuery = ""
+                        },
+                        modifier = Modifier
+                            .background(Color(0xFF1A1A1A))
+                            .width(260.dp)
+                    ) {
+                        OutlinedTextField(
+                            value = searchQuery,
+                            onValueChange = { searchQuery = it },
+                            placeholder = { Text("Search player...", color = Color.Gray, fontSize = 14.sp) },
+                            singleLine = true,
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedTextColor = Color.White,
+                                unfocusedTextColor = Color.White,
+                                focusedBorderColor = Color(0xFF76B947),
+                                unfocusedBorderColor = Color.DarkGray,
+                                focusedContainerColor = Color(0xFF252525),
+                                unfocusedContainerColor = Color(0xFF252525)
+                            ),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(8.dp)
+                        )
+
+                        Box(modifier = Modifier.heightIn(max = 240.dp)) {
+                            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                                filteredPlayers.forEach { player ->
+                                    DropdownMenuItem(
+                                        text = {
+                                            Text(
+                                                text = player.username,
+                                                color = if (player.idPlayer == selectedPlayer?.idPlayer) Color(0xFF76B947) else Color.White,
+                                                fontWeight = if (player.idPlayer == selectedPlayer?.idPlayer) FontWeight.Bold else FontWeight.Normal
+                                            )
+                                        },
+                                        onClick = {
+                                            viewModel.selectPlayer(player)
+                                            dropdownExpanded = false
+                                            searchQuery = ""
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
             },
             navigationIcon = {
@@ -79,6 +171,15 @@ fun StatisticsOverviewScreen(
                     IconButton(onClick = onBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
                     }
+                }
+            },
+            actions = {
+                IconButton(onClick = { dropdownExpanded = !dropdownExpanded }) {
+                    Icon(
+                        imageVector = Icons.Default.Person,
+                        contentDescription = "Switch Player",
+                        tint = Color.White
+                    )
                 }
             },
             colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Black)
@@ -225,17 +326,6 @@ fun StatisticsOverviewScreen(
 
 // ── Chart ─────────────────────────────────────────────────────────────────────
 
-/**
- * Canvas-drawn line chart for per-leg 3-dart averages.
- *
- * Features:
- *  - Auto-scaled Y axis with a margin so values never sit on the edge
- *  - 4 horizontal grid lines with Y labels (native canvas text — no extra dep)
- *  - Gradient area fill beneath the trend line
- *  - Data-point dots shown when ≤ 20 legs (hides them when the chart gets dense)
- *  - X-axis labels: first leg, middle (if ≥ 6 legs), last leg
- *  - "No data" placeholder for < 2 points
- */
 @Composable
 fun AverageTrendChart(
     averages: List<Float>,
@@ -257,7 +347,6 @@ fun AverageTrendChart(
 
     val showDots = averages.size <= 20
 
-    // Y-axis bounds — margin ensures the line never hugs the top/bottom edge
     val minRaw = averages.min()
     val maxRaw = averages.max()
     val span   = (maxRaw - minRaw).coerceAtLeast(20f)
@@ -294,7 +383,6 @@ fun AverageTrendChart(
             isAntiAlias = true
         }
 
-        // ── Grid lines + Y labels ────────────────────────────────────────
         val gridCount = 4
         for (i in 0..gridCount) {
             val fraction = i.toFloat() / gridCount
@@ -311,12 +399,11 @@ fun AverageTrendChart(
             nativeCanvas.drawText(
                 "%.0f".format(value),
                 leftPad - 5.dp.toPx(),
-                yPx + labelPx * 0.35f,   // vertically centred on the grid line
+                yPx + labelPx * 0.35f,
                 yLabelPaint
             )
         }
 
-        // ── Gradient area fill ───────────────────────────────────────────
         val areaPath = Path().apply {
             moveTo(xOf(0), yOf(averages[0]))
             for (i in 1 until n) lineTo(xOf(i), yOf(averages[i]))
@@ -333,7 +420,6 @@ fun AverageTrendChart(
             )
         )
 
-        // ── Trend line ───────────────────────────────────────────────────
         for (i in 0 until n - 1) {
             drawLine(
                 color       = green,
@@ -344,7 +430,6 @@ fun AverageTrendChart(
             )
         }
 
-        // ── Data-point dots ──────────────────────────────────────────────
         if (showDots) {
             averages.forEachIndexed { i, avg ->
                 val cx = xOf(i)
@@ -354,7 +439,6 @@ fun AverageTrendChart(
             }
         }
 
-        // ── X-axis labels ────────────────────────────────────────────────
         val xLabelPaint = android.graphics.Paint().apply {
             setARGB(180, 0x77, 0x77, 0x77)
             textSize  = labelPx

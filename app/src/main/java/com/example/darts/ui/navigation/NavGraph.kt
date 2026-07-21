@@ -285,7 +285,9 @@ fun DartsNavGraph(
 
         // 11. Statistics Overview (global, no player context)
         composable<StatsRoute> {
-            StatisticsOverviewScreen()
+            StatisticsOverviewScreen(
+                onBack = { navController.popBackStack() }
+            )
         }
 
         // 12. Settings Screen
@@ -297,11 +299,6 @@ fun DartsNavGraph(
                 onImportData = { navController.navigate(GameImportRoute) }
             )
         }
-
-        // 13. Turn History
-        /*composable<TurnHistoryRoute> {
-            TurnHistoryScreen(onBack = { navController.popBackStack() })
-        }*/
 
         // 14. Game Sharing Screen
         composable<GameSharingRoute> {
