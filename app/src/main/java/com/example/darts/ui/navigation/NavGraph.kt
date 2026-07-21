@@ -256,6 +256,9 @@ fun DartsNavGraph(
                     navController.navigate(HomeRoute) {
                         popUpTo<HomeRoute>()
                     }
+                },
+                onBack = {
+                    navController.popBackStack()
                 }
             )
         }
