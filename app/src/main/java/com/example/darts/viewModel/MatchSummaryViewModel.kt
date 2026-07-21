@@ -58,7 +58,10 @@ class MatchSummaryViewModel @Inject constructor(
                     scores180 = stats.sumOf { it.scores180 },
                     legsWon = stats.count { it.won },
                 )
-            }
+            }.sortedWith(
+                compareByDescending<MatchPlayerStats> { it.legsWon }
+                    .thenByDescending { it.average }
+            )
 
             _uiState.value = MatchSummaryUiState(players = result, gameMode = mode)
         }

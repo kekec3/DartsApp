@@ -12,14 +12,19 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-enum class GameMode { X01, CRICKET }
+enum class GameMode {X01, CRICKET}
+
+data class LegPlayerStat(
+    val playerId: Int,
+    val playerName: String,
+    val won: Boolean,
+    val stats: PlayerLegStats
+)
 
 data class LegSummaryUiState(
-    val player1Name: String = "",
-    val player2Name: String = "",
-    val player1Stats: PlayerLegStats? = null,
-    val player2Stats: PlayerLegStats? = null,
+    val players: List<LegPlayerStat> = emptyList(),
     val gameMode: GameMode = GameMode.X01,
+    val winnerName: String = ""
 )
 
 @HiltViewModel
@@ -36,23 +41,32 @@ class LegSummaryViewModel @Inject constructor(
         Log.d("LEG_VM", "Loading game=$gameId leg=$legNumber")
         viewModelScope.launch {
             val rows = statRepository.getLegStats(gameId, legNumber)
-            if (rows.size < 2) return@launch
-
-            val p1 = rows[0]
-            val p2 = rows[1]
-
-            val player1 = playerRepository.getPlayerById(p1.playerId)
-            val player2 = playerRepository.getPlayerById(p2.playerId)
+            if (rows.isEmpty()) return@launch
 
             val game = gameRepository.getGameById(gameId)?.type ?: "x01"
             val mode = if (game.lowercase() == "cricket") GameMode.CRICKET else GameMode.X01
 
+            val playerStatsList = rows.mapNotNull { stat ->
+                val player = playerRepository.getPlayerById(stat.playerId)
+                player?.let {
+                    LegPlayerStat(
+                        playerId = it.idPlayer,
+                        playerName = it.username,
+                        won = stat.won,
+                        stats = stat
+                    )
+                }
+            }.sortedWith(
+                compareByDescending<LegPlayerStat> { it.won }
+                    .thenByDescending { it.stats.average }
+            )
+
+            val winner = playerStatsList.firstOrNull { it.won }?.playerName ?: ""
+
             _uiState.value = LegSummaryUiState(
-                player1Name = player1?.username ?: "",
-                player2Name = player2?.username ?: "",
-                player1Stats = p1,
-                player2Stats = p2,
+                players = playerStatsList,
                 gameMode = mode,
+                winnerName = winner
             )
             Log.d("LEG_VM", "Found ${rows.size} rows, mode=$mode")
         }

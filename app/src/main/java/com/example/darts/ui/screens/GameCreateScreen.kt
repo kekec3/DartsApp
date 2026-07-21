@@ -34,8 +34,8 @@ fun GameCreateScreen(
     battleId: Int,
     viewModel: GameCreationViewModel,
     onNewGame: () -> Unit,
-    onLegSummary: (Int, Int) -> Unit,
     onMatchSummary: (Int) -> Unit,
+    onBattleSummary: (Int) -> Unit, // Added Battle Summary callback
     onMomentsTimeline: (Int) -> Unit,
     onBack: () -> Unit
 ) {
@@ -46,7 +46,6 @@ fun GameCreateScreen(
     val games by viewModel.games.collectAsStateWithLifecycle()
     var isMapView by remember { mutableStateOf(false) }
 
-    // Removed Scaffold, using Box for floating button overlay
     Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
 
         Column(modifier = Modifier.fillMaxSize()) {
@@ -96,9 +95,10 @@ fun GameCreateScreen(
                     ) {
                         Spacer(modifier = Modifier.height(16.dp))
 
+                        // Header card now properly triggers Battle Summary
                         MatchSummaryHeader(
                             gameCount = games.size,
-                            onClick = { onMatchSummary(battleId) }
+                            onClick = { onBattleSummary(battleId) }
                         )
 
                         Spacer(modifier = Modifier.height(24.dp))
@@ -119,7 +119,7 @@ fun GameCreateScreen(
                             LazyColumn(
                                 modifier = Modifier.fillMaxSize(),
                                 verticalArrangement = Arrangement.spacedBy(12.dp),
-                                contentPadding = PaddingValues(bottom = 100.dp) // Added padding for FAB
+                                contentPadding = PaddingValues(bottom = 100.dp)
                             ) {
                                 items(
                                     items = games,
@@ -171,7 +171,7 @@ fun MatchSummaryHeader(gameCount: Int, onClick: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                Text("Match Overview", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                Text("Battle Overview", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp)
                 Text("$gameCount games recorded", color = Color.Gray, fontSize = 13.sp)
             }
             Surface(
@@ -192,7 +192,7 @@ fun MatchSummaryHeader(gameCount: Int, onClick: () -> Unit) {
 
 @Composable
 fun GameItem(
-    game: Game, 
+    game: Game,
     onClick: () -> Unit,
     onMomentsTimelineClick: () -> Unit
 ) {
@@ -224,8 +224,7 @@ fun GameItem(
                 Text("${game.type} • ${game.date}", color = Color.Gray, fontSize = 13.sp)
             }
         }
-        
-        // Dynamic Timeline Button
+
         IconButton(
             onClick = { onMomentsTimelineClick() },
             modifier = Modifier
