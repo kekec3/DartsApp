@@ -62,7 +62,6 @@ fun MomentScreen(
     ) {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             Text("CAPTURE MATCH MOMENT", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
-            IconButton(onClick = onClose) { Icon(Icons.Default.Close, null, tint = Color.Gray) }
         }
 
         PrimaryTabRow(
