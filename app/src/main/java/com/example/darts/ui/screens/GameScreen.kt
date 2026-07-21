@@ -2,6 +2,7 @@ package com.example.darts.ui
 
 import android.os.Build
 import android.util.Log
+import androidx.activity.compose.BackHandler
 import androidx.annotation.RequiresApi
 import androidx.compose.animation.*
 import androidx.compose.foundation.*
@@ -69,7 +70,46 @@ fun GameScreen(
     var showTurnHistory by remember {mutableStateOf(false)}
     var showSettingsOverlay by remember { mutableStateOf(false) }
     val history by viewModel.turnHistory.collectAsState()
+    var showExitDialog by remember { mutableStateOf(false) }
 
+    BackHandler {
+        showExitDialog = true
+    }
+    if (showExitDialog) {
+        AlertDialog(
+            onDismissRequest = { showExitDialog = false },
+            title = {
+                Text(
+                    text = "Izlaz iz igre",
+                    fontWeight = FontWeight.Bold,
+                    color = HeaderWhite
+                )
+            },
+            text = {
+                Text(
+                    text = "Da li želite da napustite igru? Napredak neće biti sačuvan.",
+                    color = TextSecondary
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showExitDialog = false
+                        onNavigateBack() // Poziva navigaciju nazad
+                    }
+                ) {
+                    Text("Izađi", color = TurnOrange, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showExitDialog = false }) {
+                    Text("Otkaži", color = HeaderWhite)
+                }
+            },
+            containerColor = Color(0xFF1A201B), // Koristi tvoju tamnu boju iz teme
+            shape = RoundedCornerShape(16.dp)
+        )
+    }
 
     LaunchedEffect(Unit) {
 
