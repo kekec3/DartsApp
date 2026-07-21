@@ -78,12 +78,13 @@ fun GameScreen(
     BackHandler {
         showExitDialog = true
     }
+
     if (showExitDialog) {
         AlertDialog(
             onDismissRequest = { showExitDialog = false },
             title = {
                 Text(
-                    text = "Izlaz iz igre",
+                    text = "Exit Game",
                     fontWeight = FontWeight.Bold,
                     color = HeaderWhite
                 )
@@ -98,7 +99,7 @@ fun GameScreen(
                 TextButton(
                     onClick = {
                         showExitDialog = false
-                        onNavigateBack() // Poziva navigaciju nazad
+                        onNavigateBack()
                     }
                 ) {
                     Text("Yes", color = TurnOrange, fontWeight = FontWeight.Bold)
@@ -109,7 +110,7 @@ fun GameScreen(
                     Text("No", color = HeaderWhite)
                 }
             },
-            containerColor = Color(0xFF1A201B), // Koristi tvoju tamnu boju iz teme
+            containerColor = Color(0xFF1A201B),
             shape = RoundedCornerShape(16.dp)
         )
     }

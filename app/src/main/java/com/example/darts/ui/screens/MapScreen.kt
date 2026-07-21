@@ -10,15 +10,19 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext // 👈 DODOAT IMPORT
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.darts.db.entities.Game
+import com.google.android.gms.maps.CameraUpdateFactory
+import com.google.android.gms.maps.MapsInitializer // 👈 DODAT IMPORT
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.MapStyleOptions
 import com.google.maps.android.compose.*
+import kotlin.math.abs
 
 // ── Lista dostupnih boja za markere ──────────────────────────────────────────
 private val markerHues = listOf(
@@ -34,9 +38,10 @@ private val markerHues = listOf(
     BitmapDescriptorFactory.HUE_MAGENTA
 )
 
-// ── Funkcija koja osigurava istu boju za isti battleId ─────────────────────
-private fun getHueForBattle(battleId: Int): Float {
-    return markerHues[kotlin.math.abs(battleId.hashCode()) % markerHues.size]
+private fun getHueForBattle(battleId: Int?): Float {
+    if (battleId == null) return BitmapDescriptorFactory.HUE_GREEN
+    val safeIndex = abs(battleId) % markerHues.size
+    return markerHues[safeIndex]
 }
 
 @SuppressLint("UnrememberedMutableState")
@@ -45,28 +50,51 @@ fun MapScreen(
     games: List<Game>,
     modifier: Modifier = Modifier
 ) {
-    // 1. Convert actual game location strings to LatLng points
+    val context = LocalContext.current
+
+    // 0. Eksplicitna inicijalizacija Maps SDK-a kako CameraUpdateFactory ne bi bio null
+    LaunchedEffect(Unit) {
+        MapsInitializer.initialize(context)
+    }
+
+    // 1. Bezbedno konvertovanje lokacija
     val gamePoints = remember(games) {
         games.mapNotNull { game ->
-            val parts = game.location.split(",")
+            val rawLocation = game.location ?: return@mapNotNull null
+            val parts = rawLocation.split(",")
             if (parts.size == 2) {
-                val lat = parts[0].toDoubleOrNull() ?: 0.0
-                val lng = parts[1].toDoubleOrNull() ?: 0.0
-                if (lat != 0.0 && lng != 0.0) LatLng(lat, lng) to game else null
+                val lat = parts[0].trim().toDoubleOrNull()
+                val lng = parts[1].trim().toDoubleOrNull()
+                if (lat != null && lng != null && (lat != 0.0 || lng != 0.0)) {
+                    LatLng(lat, lng) to game
+                } else null
             } else null
         }
     }
 
-    // 2. Track which game is currently selected to show in the bottom card
-    var selectedGame by remember { mutableStateOf<Game?>(gamePoints.firstOrNull()?.second) }
+    // 2. Pamti izabranu igru
+    var selectedGame by remember { mutableStateOf<Game?>(null) }
 
-    // 3. Dynamically center the camera on the first game's location, or a default if empty
-    val initialPosition = remember(gamePoints) {
-        gamePoints.firstOrNull()?.first ?: LatLng(44.8061, 20.4761)
+    LaunchedEffect(gamePoints) {
+        if (selectedGame == null && gamePoints.isNotEmpty()) {
+            selectedGame = gamePoints.first().second
+        }
     }
 
+    // 3. Početna pozicija kamere
     val cameraPositionState = rememberCameraPositionState {
-        position = CameraPosition.fromLatLngZoom(initialPosition, 15f)
+        position = CameraPosition.fromLatLngZoom(LatLng(44.8061, 20.4761), 12f)
+    }
+
+    // Animira kameru na prvu igru čim se podaci učitaju
+    LaunchedEffect(gamePoints) {
+        if (gamePoints.isNotEmpty()) {
+            // Osiguravamo inicijalizaciju pre poziva CameraUpdateFactory
+            MapsInitializer.initialize(context)
+            cameraPositionState.animate(
+                CameraUpdateFactory.newLatLngZoom(gamePoints.first().first, 12f)
+            )
+        }
     }
 
     Box(modifier = modifier.fillMaxSize()) {
@@ -80,12 +108,9 @@ fun MapScreen(
                 zoomControlsEnabled = false,
                 myLocationButtonEnabled = true
             ),
-            onMapClick = { selectedGame = null } // Hide card if clicking empty space
+            onMapClick = { selectedGame = null }
         ) {
             gamePoints.forEach { (point, game) ->
-
-                // NAPOMENA: Ovde zameni `game.battleId` sa pravim imenom property-ja iz tvoje baze
-                // Ako Game klasa nema battleId već neki drugi ID, stavi taj ID.
                 val markerColor = getHueForBattle(game.idBattle)
 
                 Marker(
@@ -94,7 +119,7 @@ fun MapScreen(
                     icon = BitmapDescriptorFactory.defaultMarker(markerColor),
                     onClick = {
                         selectedGame = game
-                        false // Allow default camera pan behavior to center on the clicked marker
+                        false
                     }
                 )
             }
