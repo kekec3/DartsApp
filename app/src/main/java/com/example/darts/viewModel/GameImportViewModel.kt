@@ -65,12 +65,19 @@ class GameImportViewModel @Inject constructor(
     // NEARBY QR IMPORT (REPLACES HTTP DOWNLOAD)
     // -------------------------------------------------------
     fun processQrCodeScanResult(context: Context, token: String) {
+        // Basic sanity check to ensure we scanned a Darts app QR
+        if (!token.startsWith("DARTS_")) {
+            _uiState.update { it.copy(errorMessage = "Invalid QR Code scanned.") }
+            return
+        }
+
         _uiState.update { it.copy(isProcessing = true, errorMessage = null) }
 
         if (nearbyManager == null) nearbyManager = NearbyManager(context)
 
-        // Start discovery to find the advertising device
+        // Start discovery matching ONLY the token scanned from the QR
         nearbyManager?.startDiscovery(
+            targetToken = token,
             onPayloadReceived = { payload ->
                 viewModelScope.launch {
                     pendingRawPayload = payload
@@ -81,11 +88,13 @@ class GameImportViewModel @Inject constructor(
                             isProcessing = false
                         )
                     }
+                    _uiEvents.send(ImportUiEvent.ShowToast("Data received, confirm to import!"))
                 }
             },
             onStatus = { status ->
-                if (status.contains("Failed")) {
-                    viewModelScope.launch {
+                viewModelScope.launch {
+                    _uiEvents.send(ImportUiEvent.ShowToast(status))
+                    if (status.contains("Failed") || status.contains("Denied")) {
                         _uiState.update { it.copy(isProcessing = false, errorMessage = status) }
                     }
                 }
