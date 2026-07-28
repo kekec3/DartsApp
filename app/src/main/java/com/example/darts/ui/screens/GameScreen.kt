@@ -147,7 +147,7 @@ fun GameScreen(
 
             GameTopBar(
                 title   = state.gameTitle,
-                onBack  = onNavigateBack,
+                onBack  = { showExitDialog = true },
                 onStats = { showTurnHistory = true },
                 onToggleAr = { showArOverlay = true },
                 onSettings = { showSettingsOverlay = true }

@@ -38,4 +38,37 @@ class BattleRepository @Inject constructor(
     fun getAllBattles(): Flow<List<Battle>> = battleDao.getAllBattles()
 
     suspend fun getPlayersOfBattle(id: Int): List<Player> = battleDao.getPlayersInBattle(id).first()
+
+    suspend fun  ensureGuestEntitiesExist() {
+        val exists = playerDao.getPlayerByUsername("Guest1") != null
+        if (exists)
+            return
+
+        val guestIds = mutableListOf<Int>()
+        for (i in 1..4) {
+            val  id =playerDao.addPlayer(Player(username = "Guest$i", avatar = "default_avatar.png")).toInt()
+            guestIds.add(id)
+        }
+
+        for (i in 2..4) {
+            val battle = Battle(name = "QuickPlay${i}", dateCreated = System.currentTimeMillis().toString())
+            val battleId = battleDao.insertBattle(battle).toInt()
+
+            for (j in 0 until i) {
+                participateDao.addParticipation(Participate(idBattle = battleId, idPlayer = guestIds[j]))
+            }
+        }
+    }
+
+    suspend fun getQuickPlayBattleId(playerCount: Int): Int {
+        ensureGuestEntitiesExist()
+        val battleName = "QuickPlay$playerCount"
+        return battleDao.getBattleByName(battleName)?.idBattle ?: run {
+            val guestIds = mutableListOf<Int>()
+            for (i in 1..playerCount) {
+                playerDao.getPlayerByUsername("Guest$i")?.let { guestIds.add(it.idPlayer) }
+            }
+            createBattleWithPlayers(battleName, guestIds)
+        }
+    }
 }

@@ -46,3 +46,4 @@ data class CricketGameRoute(
 @Serializable data class PlayersRoute(val isSelection: Boolean = false)
 @Serializable data class PlayerStatsRoute(val playerId: Int, val playerName: String)
 @Serializable data class GameTimelineRoute(val gameId: Int)
+@Serializable data object QuickPlaySettingsRoute

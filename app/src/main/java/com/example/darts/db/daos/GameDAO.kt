@@ -36,4 +36,7 @@ interface GameDAO {
 
     @Query("UPDATE games SET history = :json WHERE idGame = :gameId")
     suspend fun updateHistory(gameId: Int, json: String)
+
+    @Query("DELETE FROM games WHERE idBattle IN (SELECT idBattle FROM battles WHERE name LIKE 'QuickPlay%')")
+    suspend fun deleteGuestGames()
 }

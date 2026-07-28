@@ -135,7 +135,10 @@ fun GameSettingsScreen(
                             colors = menuItemColors,
                             onClick = {
                                 viewModel.updateSettings(
-                                    config.copy(type = "x01", startingScore = "501", cutThroat = false)
+                                    config.copy(
+                                        type = "x01",
+                                        startingScore = if (config.startingScore == "N/A") "501" else config.startingScore
+                                    )
                                 )
                                 expandedType = false
                             }
@@ -145,7 +148,7 @@ fun GameSettingsScreen(
                             colors = menuItemColors,
                             onClick = {
                                 viewModel.updateSettings(
-                                    config.copy(type = "cricket", startingScore = "N/A", doubleOut = false, masterIn = false)
+                                    config.copy(type = "cricket")
                                 )
                                 expandedType = false
                             }

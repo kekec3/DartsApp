@@ -10,8 +10,11 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface PlayerDAO {
 
-    @Query("SELECT * FROM players")
+    @Query("SELECT * FROM players WHERE username NOT LIKE 'Guest%' ORDER BY username ASC")
     fun getAllPlayers() : Flow<List<Player>>
+
+    @Query("SELECT * FROM players WHERE username = :username LIMIT 1")
+    suspend fun getPlayerByUsername(username: String): Player?
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun addPlayer(player: Player) : Long

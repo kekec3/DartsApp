@@ -24,6 +24,18 @@ class SettingsViewModel @Inject constructor(
     private val _doubleOut = MutableStateFlow(settingsRepository.isDoubleOut())
     val doubleOut = _doubleOut.asStateFlow()
 
+    private val _masterIn = MutableStateFlow(settingsRepository.isMasterIn())
+    val masterIn = _masterIn.asStateFlow()
+
+    private val _cutThroat = MutableStateFlow(settingsRepository.isCutThroat())
+    val cutThroat = _cutThroat.asStateFlow()
+
+    private val _showSuggestions = MutableStateFlow(settingsRepository.isShowSuggestions())
+    val showSuggestions = _showSuggestions.asStateFlow()
+
+    private val _trackLocation = MutableStateFlow(settingsRepository.isTrackLocation())
+    val trackLocation = _trackLocation.asStateFlow()
+
     private val _startingPlayerDefault = MutableStateFlow(settingsRepository.getStartingPlayerDefault())
     val startingPlayerDefault = _startingPlayerDefault.asStateFlow()
 
@@ -48,6 +60,26 @@ class SettingsViewModel @Inject constructor(
     fun setDoubleOut(enabled: Boolean) {
         settingsRepository.setDoubleOut(enabled)
         _doubleOut.value = enabled
+    }
+
+    fun setMasterIn(enabled: Boolean) {
+        settingsRepository.setMasterIn(enabled)
+        _masterIn.value = enabled
+    }
+
+    fun setCutThroat(enabled: Boolean) {
+        settingsRepository.setCutThroat(enabled)
+        _cutThroat.value = enabled
+    }
+
+    fun setShowSuggestions(enabled: Boolean) {
+        settingsRepository.setShowSuggestions(enabled)
+        _showSuggestions.value = enabled
+    }
+
+    fun setTrackLocation(enabled: Boolean) {
+        settingsRepository.setTrackLocation(enabled)
+        _trackLocation.value = enabled
     }
 
     fun setStartingPlayerDefault(value: String) {

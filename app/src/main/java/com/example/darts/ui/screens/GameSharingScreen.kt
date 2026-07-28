@@ -40,7 +40,8 @@ import java.util.Hashtable
 fun GameSharingScreen(
     modifier: Modifier = Modifier,
     viewModel: GameSharingViewModel,
-    onBack: () -> Unit = {}
+    onBack: () -> Unit = {},
+    onImportData: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val players by viewModel.players.collectAsState()
@@ -80,13 +81,22 @@ fun GameSharingScreen(
 
         Column(modifier = Modifier.fillMaxSize().padding(20.dp)) {
             Box(
-                modifier = Modifier.fillMaxWidth().background(Color(0xFF1A1A1A), RoundedCornerShape(12.dp))
-                    .clickable { isDropdownExpanded = true }.padding(16.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color(0xFF1A1A1A), RoundedCornerShape(12.dp))
+                    .clickable { isDropdownExpanded = true }
+                    .padding(16.dp)
             ) {
-                Text(text = selectedPlayer?.username ?: "Select player", color = if (selectedPlayer != null) Color.White else Color.DarkGray)
+                Text(
+                    text = selectedPlayer?.username ?: "Select player",
+                    color = if (selectedPlayer != null) Color.White else Color.DarkGray
+                )
                 DropdownMenu(expanded = isDropdownExpanded, onDismissRequest = { isDropdownExpanded = false }) {
                     players.forEach { player ->
-                        DropdownMenuItem(text = { Text(player.username) }, onClick = { selectedPlayer = player; isDropdownExpanded = false })
+                        DropdownMenuItem(
+                            text = { Text(player.username) },
+                            onClick = { selectedPlayer = player; isDropdownExpanded = false }
+                        )
                     }
                 }
             }
@@ -96,14 +106,25 @@ fun GameSharingScreen(
             selectedPlayer?.let { player ->
                 LaunchedEffect(player) { viewModel.startNearbyAdvertising(context, player) }
 
-                Card(colors = CardDefaults.cardColors(Color(0xFF1A1A1A)), shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                Card(
+                    colors = CardDefaults.cardColors(Color(0xFF1A1A1A)),
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(20.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
                         Text(player.username, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                        Spacer(Modifier.height(8.dp))
+                        Spacer(Modifier.height(12.dp))
                         if (screenState.isGeneratingQr) {
                             CircularProgressIndicator(color = Color(0xFF76B947))
                         } else {
-                            screenState.qrPayload?.let { token -> QRGeneratorContainer(textToEncode = token) }
+                            screenState.qrPayload?.let { token ->
+                                QRGeneratorContainer(textToEncode = token)
+                            }
                         }
                     }
                 }
@@ -114,20 +135,48 @@ fun GameSharingScreen(
             Spacer(Modifier.height(12.dp))
 
             Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-                ShareOptionItem("WA File", Icons.Default.Share, Color(0xFF075E54)) { selectedPlayer?.let { viewModel.shareViaApplicationFile(context, it, "com.whatsapp") } }
-                ShareOptionItem("Gmail", Icons.Default.Email, Color(0xFFEA4335)) { selectedPlayer?.let { viewModel.shareViaApplicationFile(context, it, "com.google.android.gm") } }
-                ShareOptionItem("More", Icons.Default.MoreVert, Color.Gray) { selectedPlayer?.let { viewModel.shareViaApplicationFile(context, it, null) } }
+                ShareOptionItem("WA File", Icons.Default.Share, Color(0xFF075E54)) {
+                    selectedPlayer?.let { viewModel.shareViaApplicationFile(context, it, "com.whatsapp") }
+                }
+                ShareOptionItem("Gmail", Icons.Default.Email, Color(0xFFEA4335)) {
+                    selectedPlayer?.let { viewModel.shareViaApplicationFile(context, it, "com.google.android.gm") }
+                }
+                ShareOptionItem("More", Icons.Default.MoreVert, Color.Gray) {
+                    selectedPlayer?.let { viewModel.shareViaApplicationFile(context, it, null) }
+                }
             }
 
             Spacer(Modifier.weight(1f))
 
             Button(
+                onClick = onImportData,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2A2A2A)),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.FileDownload,
+                    contentDescription = null,
+                    tint = Color(0xFF76B947)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("IMPORT DATA", color = Color.White, fontWeight = FontWeight.Bold)
+            }
+
+            Spacer(Modifier.height(12.dp))
+
+            Button(
                 onClick = { selectedPlayer?.let { viewModel.exportToPublicDownloads(context, it) } },
                 enabled = selectedPlayer != null && uiState !is ShareUiState.Loading,
-                modifier = Modifier.fillMaxWidth().height(60.dp),
-                colors = ButtonDefaults.buttonColors(Color(0xFF76B947))
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+                colors = ButtonDefaults.buttonColors(Color(0xFF76B947)),
+                shape = RoundedCornerShape(12.dp)
             ) {
-                Text("EXPORT TO DOWNLOADS", color = Color.Black)
+                Text("EXPORT TO DOWNLOADS", color = Color.Black, fontWeight = FontWeight.Bold)
             }
         }
     }

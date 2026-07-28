@@ -13,7 +13,7 @@ interface BattleDAO {
     @Insert
     suspend fun insertBattle(battle: Battle): Long
 
-    @Query("SELECT * FROM battles ORDER BY idBattle DESC")
+    @Query("SELECT * FROM battles WHERE name NOT LIKE 'QuickPlay%' ORDER BY idBattle DESC")
     fun getAllBattles(): Flow<List<Battle>>
 
     @Query("SELECT p.* FROM players p JOIN participate pa ON p.idPlayer = pa.idPlayer WHERE pa.idBattle = :battleId")
@@ -22,4 +22,7 @@ interface BattleDAO {
     // ADD THIS HELPER FOR EXPORT:
     @Query("SELECT * FROM battles WHERE idBattle IN (:battleIds)")
     suspend fun getBattlesByIds(battleIds: List<Int>): List<Battle>
+
+    @Query("SELECT * FROM battles WHERE name = :name LIMIT 1")
+    suspend fun getBattleByName(name: String): Battle?
 }

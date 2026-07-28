@@ -32,13 +32,18 @@ fun SettingsScreen(
     val startingScore by viewModel.startingScore.collectAsStateWithLifecycle()
     val legs by viewModel.legs.collectAsStateWithLifecycle()
     val doubleOut by viewModel.doubleOut.collectAsStateWithLifecycle()
+    val masterIn by viewModel.masterIn.collectAsStateWithLifecycle()
+    val cutThroat by viewModel.cutThroat.collectAsStateWithLifecycle()
+    val showSuggestions by viewModel.showSuggestions.collectAsStateWithLifecycle()
+    val trackLocation by viewModel.trackLocation.collectAsStateWithLifecycle()
     val startingPlayerDefault by viewModel.startingPlayerDefault.collectAsStateWithLifecycle()
     val soundEffects by viewModel.soundEffects.collectAsStateWithLifecycle()
+
+    val isX01 = gameType.equals("x01", ignoreCase = true)
 
     var expandedType by remember { mutableStateOf(false) }
     var expandedScore by remember { mutableStateOf(false) }
     var expandedLegs by remember { mutableStateOf(false) }
-    var expandedCheckout by remember { mutableStateOf(false) }
     var expandedStartingPlayer by remember { mutableStateOf(false) }
 
     val menuItemColors = MenuDefaults.itemColors(
@@ -62,7 +67,6 @@ fun SettingsScreen(
                     Icon(Icons.Default.KeyboardArrowLeft, contentDescription = "Back", tint = Color.White)
                 }
             },
-            // PLUS ICON REMOVED HERE by omitting the 'actions' block
             colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Black)
         )
 
@@ -72,12 +76,13 @@ fun SettingsScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp)
         ) {
-            // --- GENERAL SECTION ---
+            // --- GAME DEFAULTS SECTION ---
             SettingsCategoryLabel("GAME DEFAULTS")
 
+            // Game Type Selector
             SettingsDropdownRow(
                 label = "Game Type",
-                value = gameType,
+                value = if (isX01) "x01" else "Cricket",
                 expanded = expandedType,
                 onExpandedChange = { expandedType = it }
             ) {
@@ -99,24 +104,28 @@ fun SettingsScreen(
                 )
             }
 
-            SettingsDropdownRow(
-                label = "Starting Score",
-                value = if (gameType.lowercase() == "cricket") "N/A" else startingScore,
-                expanded = expandedScore,
-                onExpandedChange = { expandedScore = it }
-            ) {
-                listOf("301", "501", "701").forEach { score ->
-                    DropdownMenuItem(
-                        text = { Text(score) },
-                        colors = menuItemColors,
-                        onClick = {
-                            viewModel.setStartingScore(score)
-                            expandedScore = false
-                        }
-                    )
+            // X01 Specific: Starting Score
+            if (isX01) {
+                SettingsDropdownRow(
+                    label = "Starting Score",
+                    value = startingScore,
+                    expanded = expandedScore,
+                    onExpandedChange = { expandedScore = it }
+                ) {
+                    listOf("301", "501", "701").forEach { score ->
+                        DropdownMenuItem(
+                            text = { Text(score) },
+                            colors = menuItemColors,
+                            onClick = {
+                                viewModel.setStartingScore(score)
+                                expandedScore = false
+                            }
+                        )
+                    }
                 }
             }
 
+            // Common: Match Format
             SettingsDropdownRow(
                 label = "Match Format",
                 value = if (legs == 1) "1 Leg" else "Best of $legs Legs",
@@ -135,30 +144,7 @@ fun SettingsScreen(
                 }
             }
 
-            SettingsDropdownRow(
-                label = "Checkout Rule",
-                value = if (doubleOut) "Double Out" else "Single Out",
-                expanded = expandedCheckout,
-                onExpandedChange = { expandedCheckout = it }
-            ) {
-                DropdownMenuItem(
-                    text = { Text("Single Out") },
-                    colors = menuItemColors,
-                    onClick = {
-                        viewModel.setDoubleOut(false)
-                        expandedCheckout = false
-                    }
-                )
-                DropdownMenuItem(
-                    text = { Text("Double Out") },
-                    colors = menuItemColors,
-                    onClick = {
-                        viewModel.setDoubleOut(true)
-                        expandedCheckout = false
-                    }
-                )
-            }
-
+            // Common: Starting Player Default
             SettingsDropdownRow(
                 label = "Starting Player",
                 value = if (startingPlayerDefault.lowercase() == "random") "Random" else "Default (First)",
@@ -183,6 +169,18 @@ fun SettingsScreen(
                 )
             }
 
+            // Mode-specific Switches
+            if (isX01) {
+                SettingsSwitchRowPlain("Double Out", doubleOut) { viewModel.setDoubleOut(it) }
+                SettingsSwitchRowPlain("Master In", masterIn) { viewModel.setMasterIn(it) }
+            } else {
+                SettingsSwitchRowPlain("Cut-Throat", cutThroat) { viewModel.setCutThroat(it) }
+            }
+
+            // General Game Switches
+            SettingsSwitchRowPlain("Show Suggestions", showSuggestions) { viewModel.setShowSuggestions(it) }
+            SettingsSwitchRowPlain("Track Match Location", trackLocation) { viewModel.setTrackLocation(it) }
+
             Spacer(modifier = Modifier.height(24.dp))
 
             // --- PREFERENCES SECTION ---
@@ -191,7 +189,7 @@ fun SettingsScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // --- ACCOUNT & ABOUT ---
+            // --- SYSTEM SECTION ---
             SettingsCategoryLabel("SYSTEM")
             SettingsPlainRow("Import Data", "CSV / JSON", onClick = onImportData)
             SettingsPlainRow("Version", "1.0.0")

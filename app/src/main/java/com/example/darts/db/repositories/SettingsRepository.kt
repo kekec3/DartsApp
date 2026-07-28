@@ -18,6 +18,8 @@ class SettingsRepository @Inject constructor(
         private const val KEY_STARTING_SCORE = "pref_starting_score"
         private const val KEY_LEGS = "pref_legs"
         private const val KEY_DOUBLE_OUT = "pref_double_out"
+        private const val KEY_MASTER_IN = "pref_master_in"
+        private const val KEY_CUT_THROAT = "pref_cut_throat"
         private const val KEY_STARTING_PLAYER_DEFAULT = "pref_starting_player_default"
         private const val KEY_SOUND_EFFECTS = "pref_sound_effects"
         private const val KEY_SHOW_SUGGESTIONS = "pref_show_suggestions"
@@ -35,6 +37,12 @@ class SettingsRepository @Inject constructor(
 
     fun isDoubleOut(): Boolean = prefs.getBoolean(KEY_DOUBLE_OUT, false)
     fun setDoubleOut(doubleOut: Boolean) = prefs.edit { putBoolean(KEY_DOUBLE_OUT, doubleOut) }
+
+    fun isMasterIn(): Boolean = prefs.getBoolean(KEY_MASTER_IN, false)
+    fun setMasterIn(masterIn: Boolean) = prefs.edit { putBoolean(KEY_MASTER_IN, masterIn) }
+
+    fun isCutThroat(): Boolean = prefs.getBoolean(KEY_CUT_THROAT, false)
+    fun setCutThroat(cutThroat: Boolean) = prefs.edit { putBoolean(KEY_CUT_THROAT, cutThroat) }
 
     fun getStartingPlayerDefault(): String = prefs.getString(KEY_STARTING_PLAYER_DEFAULT, "Random") ?: "Random"
     fun setStartingPlayerDefault(value: String) = prefs.edit {

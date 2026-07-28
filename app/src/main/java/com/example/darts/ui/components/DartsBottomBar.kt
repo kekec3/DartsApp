@@ -6,6 +6,7 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -78,7 +79,7 @@ fun DartsBottomBar(navController: NavHostController) {
             colors = navigationItemColors()
         )
 
-        // --- MORE/STATS ITEM ---
+        // --- SHARE ITEM ---
         NavigationBarItem(
             selected = currentDestination?.hierarchy?.any { it.hasRoute<GameSharingRoute>() } == true,
             onClick = {
@@ -88,8 +89,8 @@ fun DartsBottomBar(navController: NavHostController) {
                     restoreState = true
                 }
             },
-            icon = { Icon(Icons.Default.Menu, null, modifier = Modifier.size(26.dp)) },
-            label = { Text("More", fontSize = 12.sp) },
+            icon = { Icon(Icons.Default.Share, null, modifier = Modifier.size(26.dp)) },
+            label = { Text("Share", fontSize = 12.sp) },
             colors = navigationItemColors()
         )
     }

@@ -67,6 +67,8 @@ class GameCreationViewModel @Inject constructor(
             startingScore = settingsRepository.getStartingScore(),
             legs = settingsRepository.getLegs(),
             doubleOut = settingsRepository.isDoubleOut(),
+            masterIn = settingsRepository.isMasterIn(),
+            cutThroat = settingsRepository.isCutThroat(),
             showSuggestions = settingsRepository.isShowSuggestions(),
             trackLocation = settingsRepository.isTrackLocation(),
             startingPlayerId = when (settingsRepository.getStartingPlayerDefault().lowercase()) {
@@ -87,6 +89,8 @@ class GameCreationViewModel @Inject constructor(
             startingScore = settingsRepository.getStartingScore(),
             legs = settingsRepository.getLegs(),
             doubleOut = settingsRepository.isDoubleOut(),
+            masterIn = settingsRepository.isMasterIn(),
+            cutThroat = settingsRepository.isCutThroat(),
             showSuggestions = settingsRepository.isShowSuggestions(),
             trackLocation = settingsRepository.isTrackLocation(),
             startingPlayerId = when (settingsRepository.getStartingPlayerDefault().lowercase()) {

@@ -21,7 +21,9 @@ import com.example.darts.viewModel.GameImportViewModel
 import com.example.darts.viewModel.GameSharingViewModel
 import com.example.darts.viewModel.GameViewModelCricket
 import com.example.darts.viewModel.GameViewModelX01
+import com.example.darts.viewModel.HomeViewModel
 import com.example.darts.viewModel.MapViewModel
+import com.example.darts.viewModel.QuickPlayViewModel
 import com.example.darts.viewModel.XO1Config
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -53,13 +55,46 @@ fun DartsNavGraph(
     ) {
         // 1. Home Screen
         composable<HomeRoute> {
+            val homeViewModel: HomeViewModel = hiltViewModel()
             HomeScreen(
+                onStartGame = { navController.navigate(QuickPlaySettingsRoute) },
                 onViewBattles = { navController.navigate(BattlesRoute) },
                 onViewMoments = { navController.navigate(MomentsGalleryRoute) },
                 onViewPlayers = { navController.navigate(PlayersRoute(isSelection = false)) },
                 onViewStats = { navController.navigate(StatsRoute) },
-                onViewSettings = {navController.navigate(SettingsRoute)},
-                onViewMap = {navController.navigate(MapRoute(null))}
+                onViewSettings = { navController.navigate(SettingsRoute) },
+                onViewMap = { navController.navigate(MapRoute(null)) }
+            )
+        }
+
+        composable<QuickPlaySettingsRoute> {
+            val viewModel: QuickPlayViewModel = hiltViewModel()
+
+            QuickPlaySettingsScreen(
+                onBack = { navController.popBackStack() },
+                onStartGame = { playerCount, mode ->
+                    viewModel.launchQuickMatch(playerCount, mode) { gameId, isCricket, legs, target, doubleOut, masterIn, cutThroat ->
+                        if (isCricket) {
+                            navController.navigate(
+                                CricketGameRoute(
+                                    gameId = gameId,
+                                    maxLegs = legs,
+                                    cutThroat = cutThroat
+                                )
+                            )
+                        } else {
+                            navController.navigate(
+                                X01GameRoute(
+                                    gameId = gameId,
+                                    maxLegs = legs,
+                                    target = target,
+                                    doubleOut = doubleOut,
+                                    masterIn = masterIn
+                                )
+                            )
+                        }
+                    }
+                }
             )
         }
 
@@ -305,7 +340,8 @@ fun DartsNavGraph(
             val gameSharingViewModel: GameSharingViewModel = hiltViewModel()
             GameSharingScreen(
                 onBack = { navController.popBackStack() },
-                viewModel =gameSharingViewModel
+                onImportData = { navController.navigate(GameImportRoute) },
+                viewModel = gameSharingViewModel
             )
         }
 
