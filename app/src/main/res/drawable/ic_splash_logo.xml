@@ -1,0 +1,90 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Left Side: Dart Flight, Barrel & Point (Original) -->
+    <group android:name="dart">
+        <!-- Flight -->
+        <path
+            android:fillColor="#8CDB00"
+            android:pathData="M 52,18 L 30,28 C 28,29 27,32 27,35 L 27,50 L 52,70 Z" />
+        <!-- Shaft & Barrel -->
+        <path
+            android:fillColor="#8CDB00"
+            android:pathData="M 50,16 L 53,16 L 53,88 L 50,88 Z" />
+        <path
+            android:fillColor="#8CDB00"
+            android:pathData="M 48,65 L 53,65 L 53,78 L 48,78 Z" />
+        <!-- Point -->
+        <path
+            android:fillColor="#8CDB00"
+            android:pathData="M 51.5,88 L 53,88 L 53,96 L 51.5,93 Z" />
+    </group>
+
+    <!-- Right Side: Simplified Dartboard with Alternating Pattern -->
+    <group
+        android:name="board"
+        android:pivotX="54"
+        android:pivotY="54">
+
+        <!-- ALTERNATING FILLED SECTORS -->
+
+        <!-- Sector 1 (Top): Outer Ring Filled -->
+        <path
+            android:fillColor="#8CDB00"
+            android:pathData="M 54,18 A 36,36 0 0,1 79.5,28.5 L 71,37 A 24,24 0 0,0 54,30 Z" />
+
+        <!-- Sector 2 (Upper-Right): Inner Ring Filled -->
+        <path
+            android:fillColor="#8CDB00"
+            android:pathData="M 71,37 A 24,24 0 0,1 78,54 L 62,54 A 8,8 0 0,0 59.7,48.3 Z" />
+
+        <!-- Sector 3 (Lower-Right): Outer Ring Filled -->
+        <path
+            android:fillColor="#8CDB00"
+            android:pathData="M 90,54 A 36,36 0 0,1 79.5,79.5 L 71,71 A 24,24 0 0,0 78,54 Z" />
+
+        <!-- Sector 4 (Bottom): Inner Ring Filled -->
+        <path
+            android:fillColor="#8CDB00"
+            android:pathData="M 71,71 A 24,24 0 0,1 54,78 L 54,62 A 8,8 0 0,0 59.7,59.7 Z" />
+
+
+        <!-- WIREFRAME OVERLAY -->
+
+        <!-- Outer Boundary Ring Arc (R = 36) -->
+        <path
+            android:strokeColor="#8CDB00"
+            android:strokeWidth="2.5"
+            android:pathData="M 54,18 A 36,36 0 0,1 54,90" />
+
+        <!-- Middle Scoring Ring Arc (R = 24) -->
+        <path
+            android:strokeColor="#8CDB00"
+            android:strokeWidth="2"
+            android:pathData="M 54,30 A 24,24 0 0,1 54,78" />
+
+        <!-- Clean Radial Spider Wires -->
+        <path
+            android:strokeColor="#8CDB00"
+            android:strokeWidth="1.5"
+            android:pathData="M 54,18 L 54,46
+                              M 59.7,48.3 L 79.5,28.5
+                              M 62,54 L 90,54
+                              M 59.7,59.7 L 79.5,79.5
+                              M 54,62 L 54,90" />
+
+        <!-- Outer Bullseye Ring (R = 8) -->
+        <path
+            android:strokeColor="#8CDB00"
+            android:strokeWidth="2"
+            android:pathData="M 54,46 A 8,8 0 0,1 54,62" />
+
+        <!-- Inner Bullseye Solid Center -->
+        <path
+            android:fillColor="#8CDB00"
+            android:pathData="M 54,50 A 4,4 0 0,1 54,58 Z" />
+    </group>
+</vector>

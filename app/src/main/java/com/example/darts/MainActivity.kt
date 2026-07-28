@@ -1,12 +1,16 @@
 package com.example.darts
 
 import android.Manifest
+import android.animation.ObjectAnimator
+import android.animation.PropertyValuesHolder
 import android.annotation.SuppressLint
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.view.View
+import android.view.animation.DecelerateInterpolator
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -23,7 +27,9 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.core.animation.doOnEnd
 import androidx.core.content.ContextCompat
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
@@ -66,8 +72,34 @@ class MainActivity : ComponentActivity() {
     @SuppressLint("RestrictedApi")
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
+
+        val splashScreen = installSplashScreen()
+
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        splashScreen.setOnExitAnimationListener { splashScreenViewProvider ->
+            val splashView = splashScreenViewProvider.view
+            val iconView = splashScreenViewProvider.iconView
+
+            val alpha = PropertyValuesHolder.ofFloat(View.ALPHA, 1f, 0f)
+            val scaleX = PropertyValuesHolder.ofFloat(View.SCALE_X, 1f, 1.25f)
+            val scaleY = PropertyValuesHolder.ofFloat(View.SCALE_Y, 1f, 1.25f)
+
+            ObjectAnimator.ofPropertyValuesHolder(iconView, alpha, scaleX, scaleY).apply {
+                interpolator = DecelerateInterpolator()
+                duration = 400L
+                doOnEnd { splashScreenViewProvider.remove() }
+                start()
+            }
+
+            // Fade background out smoothly
+            splashView.animate()
+                .alpha(0f)
+                .setDuration(400L)
+                .start()
+        }
+
 
         // Handle incoming intent data for Cold Starts (.darts files)
         handleIncomingIntent(intent)

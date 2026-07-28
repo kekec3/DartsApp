@@ -2,6 +2,7 @@ package com.example.darts.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -63,7 +64,7 @@ fun QuickPlaySettingsScreen(
 
             // Player Count Selection
             Text(
-                text = "NUMBER OF PLAYERS",
+                text = "PLAYER COUNT",
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color.Gray,
@@ -82,16 +83,16 @@ fun QuickPlaySettingsScreen(
                         modifier = Modifier
                             .weight(1f)
                             .height(56.dp),
-                        shape = RoundedCornerShape(12.dp),
+                        shape = CircleShape,
                         colors = ButtonDefaults.buttonColors(
                             containerColor = if (isSelected) LimePrimary else Color(0xFF1A201B),
                             contentColor = if (isSelected) Color.Black else Color.White
                         )
                     ) {
                         Text(
-                            text = "$count Players",
+                            text = "$count",
                             fontWeight = FontWeight.Bold,
-                            fontSize = 15.sp
+                            fontSize = 18.sp
                         )
                     }
                 }
@@ -120,7 +121,7 @@ fun QuickPlaySettingsScreen(
                         modifier = Modifier
                             .weight(1f)
                             .height(56.dp),
-                        shape = RoundedCornerShape(12.dp),
+                        shape = CircleShape,
                         colors = ButtonDefaults.buttonColors(
                             containerColor = if (isSelected) LimePrimary else Color(0xFF1A201B),
                             contentColor = if (isSelected) Color.Black else Color.White
@@ -143,7 +144,7 @@ fun QuickPlaySettingsScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(58.dp),
-                shape = RoundedCornerShape(16.dp),
+                shape = CircleShape,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = LimePrimary,
                     contentColor = Color.Black

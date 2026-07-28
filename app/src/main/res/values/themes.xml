@@ -1,5 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Base App Theme -->
+    <style name="Theme.Darts" parent="Theme.Material3.Dark.NoActionBar">
+        <item name="android:statusBarColor">#0D110E</item>
+        <item name="android:windowBackground">#0D110E</item>
+    </style>
 
-    <style name="Theme.Darts" parent="android:Theme.Material.Light.NoActionBar" />
+    <!-- Android 12+ Splash Screen Theme -->
+    <style name="Theme.App.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">#0D110E</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_logo</item>
+        <item name="windowSplashScreenAnimationDuration">800</item>
+        <item name="postSplashScreenTheme">@style/Theme.Darts</item>
+    </style>
 </resources>
