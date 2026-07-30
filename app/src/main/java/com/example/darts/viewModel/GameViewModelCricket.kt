@@ -14,6 +14,7 @@ import com.example.darts.engine.DartThrow
 import com.example.darts.engine.GameEngineCricket
 import com.example.darts.engine.Turn
 import com.example.darts.ui.screens.score_entry.EntryMethod
+import com.example.darts.viewModel.states.CricketUiState
 import com.example.darts.viewModel.states.DartSlotState
 import com.example.darts.viewModel.states.GameDisplayState
 import com.example.darts.viewModel.states.GameState
@@ -31,12 +32,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import javax.inject.Inject
-
-// State object specific to Cricket for UI rendering (marks)
-data class CricketUiState(
-    val playerStates: List<PlayerStateCricket> = emptyList(),
-    val currentPlayerIndex: Int = 0
-)
 
 @HiltViewModel
 class GameViewModelCricket @Inject constructor(

@@ -11,6 +11,31 @@ import kotlinx.coroutines.flow.StateFlow
 
 sealed interface GameConfig
 
+/**
+ * Which rule set a game was played under.
+ * Shared by LegSummaryViewModel, MatchSummaryViewModel and the summary screens.
+ */
+enum class GameMode { X01, CRICKET }
+
+/** Game type chosen on the Quick Play screen; input to QuickPlayViewModel. */
+enum class QuickGameMode { X01, CRICKET }
+
+/**
+ * Flat UI-level settings collected on the Game Settings screen, converted into a
+ * concrete [GameConfig] by NavGraph when the match starts.
+ */
+data class GameSettings(
+    val type: String = "x01",
+    val startingScore: String = "501",
+    val legs: Int = 3,
+    val doubleOut: Boolean = false,
+    val masterIn: Boolean = false,
+    val cutThroat: Boolean = false,
+    val showSuggestions: Boolean = true,
+    val trackLocation: Boolean = false,
+    val startingPlayerId: Int = -1 // -1 = Random, -2 = Default Order, >0 = Player ID
+)
+
 data class XO1Config(
     val target: Int = 501,
     val doubleOut: Boolean = false,

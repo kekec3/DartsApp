@@ -19,9 +19,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.darts.ui.theme.LimePrimary
+import com.example.darts.viewModel.QuickGameMode
 import com.example.darts.R
-
-enum class QuickGameMode { X01, CRICKET }
 
 @Composable
 fun QuickPlaySettingsScreen(

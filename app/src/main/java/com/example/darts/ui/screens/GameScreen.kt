@@ -17,7 +17,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -30,6 +29,7 @@ import com.example.darts.ui.screens.score_entry.EntryMethod
 import com.example.darts.ui.screens.score_entry.EntryMethodBar
 import com.example.darts.ui.screens.score_entry.PlayerCardMinimal
 import com.example.darts.ui.screens.score_entry.ScoreInputEntry
+import com.example.darts.ui.screens.score_entry.methodIcon
 import com.example.darts.ui.screens.score_entry.VoiceRecognitionScreen
 import com.example.darts.ui.theme.LimePrimary
 import com.example.darts.ui.theme.TextSecondary
@@ -550,12 +550,5 @@ private fun DartSlotCell(
     }
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-private fun methodIcon(method: EntryMethod): ImageVector = when (method) {
-    is EntryMethod.BoardButtons -> Icons.Default.GridOn
-    is EntryMethod.ScoreInput   -> Icons.Default.Keyboard
-    is EntryMethod.Voice        -> Icons.Default.Mic
-    is EntryMethod.Camera       -> Icons.Default.Videocam
-    is EntryMethod.Cricket      -> Icons.Default.SportsCricket
-}
+// Entry-method icons live with the entry-method components, in
+// score_entry/ScoreEntryComponents.kt.

@@ -37,3 +37,12 @@ data class GameDisplayState(
     val isFinished: Boolean = false,
     val winner: String? = null
 )
+
+/**
+ * Cricket-specific projection for the mark grid, exposed by GameViewModelCricket
+ * alongside [GameDisplayState] — which has no concept of marks.
+ */
+data class CricketUiState(
+    val playerStates: List<PlayerStateCricket> = emptyList(),
+    val currentPlayerIndex: Int = 0
+)

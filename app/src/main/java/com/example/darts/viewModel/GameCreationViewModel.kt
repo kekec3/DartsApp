@@ -173,18 +173,3 @@ class GameCreationViewModel @Inject constructor(
         return ""
     }
 }
-
-/**
- * Flat UI-level settings collected on the Game Settings screen[cite: 4].
- */
-data class GameSettings(
-    val type: String = "x01",
-    val startingScore: String = "501",
-    val legs: Int = 3,
-    val doubleOut: Boolean = false,
-    val masterIn: Boolean = false,
-    val cutThroat: Boolean = false,
-    val showSuggestions: Boolean = true,
-    val trackLocation: Boolean = false,
-    val startingPlayerId: Int = -1 // -1 = Random, -2 = Default Order, >0 = Player ID
-)

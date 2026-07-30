@@ -12,8 +12,6 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-enum class GameMode {X01, CRICKET}
-
 data class LegPlayerStat(
     val playerId: Int,
     val playerName: String,

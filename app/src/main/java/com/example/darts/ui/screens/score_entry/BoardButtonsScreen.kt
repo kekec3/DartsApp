@@ -20,7 +20,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -590,14 +589,6 @@ fun ScoreInputEntry(onScoreEntered: (DartThrow) -> Unit) {
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers
 // ─────────────────────────────────────────────────────────────────────────────
-
-private fun methodIcon(method: EntryMethod): ImageVector = when (method) {
-    is EntryMethod.BoardButtons -> Icons.Default.GridOn
-    is EntryMethod.ScoreInput   -> Icons.Default.Keyboard
-    is EntryMethod.Voice        -> Icons.Default.Mic
-    is EntryMethod.Camera       -> Icons.Default.Videocam
-    is EntryMethod.Cricket     -> Icons.Default.SportsCricket
-}
 
 private val Multiplier.factor: Int
     get() = when (this) {

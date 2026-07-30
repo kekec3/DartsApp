@@ -23,7 +23,7 @@ import com.example.darts.engine.DartThrow
 import com.example.darts.engine.Multiplier
 import com.example.darts.ui.theme.LimePrimary
 import com.example.darts.ui.theme.TextSecondary
-import com.example.darts.viewModel.CricketUiState
+import com.example.darts.viewModel.states.CricketUiState
 import com.example.darts.viewModel.states.CricketNumber
 import com.example.darts.viewModel.states.PlayerStateCricket
 

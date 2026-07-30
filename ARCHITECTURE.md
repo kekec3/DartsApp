@@ -123,15 +123,15 @@ read-modify-write inside a single `@Transaction`.
 
 | File | Role |
 |---|---|
-| `GameViewModel.kt` | *Contracts only, no implementation:* `GameConfig`/`XO1Config`/`CricketConfig`, the `BaseGameViewModel` interface (what `GameScreen` is allowed to call), `GameNavigationEvent`, and `TurnSummary`. This is the seam that lets one screen drive two rule sets. |
+| `GameViewModel.kt` | *Contracts only, no implementation:* `GameConfig`/`XO1Config`/`CricketConfig`, the `BaseGameViewModel` interface (what `GameScreen` is allowed to call), `GameNavigationEvent`, `TurnSummary`, and the shared model types `GameMode`, `QuickGameMode` and `GameSettings`. This is the seam that lets one screen drive two rule sets. |
 | `GameViewModelX01.kt` | Loads the game + battle players, applies starting-player policy (random / specific / declared order), drives `GameEngineX01`, auto-commits the turn on 3 darts / checkout / bust, maps state to `GameDisplayState` (3-dart average, last score, darts thrown), persists leg + career stats, serialises turn history to JSON at match end, plays sounds via `SoundManager` when enabled. |
 | `GameViewModelCricket.kt` | Same lifecycle for Cricket. Additionally exposes `cricketUiState` (mark grid) for `CricketEntry`, computes MPR instead of an average, and stores MPR in the shared `average` column. Uses `replay = 1` on the navigation flow (hence a real `consumeNavigationEvent()`). |
 
 ### State holders (`viewModel/states/`)
 `PlayerState` (marker interface), `PlayerStateX01`, `PlayerStateCricket` (+ `CricketNumber`),
 `GameState<T>` (players, current player, leg, finished flags, completed-leg snapshot),
-`GameDisplayState` (+ `PlayerDisplayState`, `TurnDisplayState`, `DartSlotState`, `StatRow`) — the
-pure-UI projection.
+`GameDisplayState` (+ `PlayerDisplayState`, `TurnDisplayState`, `DartSlotState`, `StatRow`,
+`CricketUiState`) — the pure-UI projections.
 
 ### The rest
 
@@ -176,7 +176,7 @@ pure-UI projection.
 
 | File | What it does |
 |---|---|
-| `EntryMethod.kt` | Sealed class of the five methods (Board, Score, Voice, Camera, Cricket). `supportedEntryMethods` on the ViewModel decides which appear — X01 offers four, Cricket offers two. |
+| `EntryMethod.kt` | Sealed class of the five methods (Board, Score, Voice, Camera, Cricket), plus `methodIcon()` which maps a method to its Compose icon. `supportedEntryMethods` on the ViewModel decides which appear — X01 offers four, Cricket offers two. |
 | `BoardButtonsScreen.kt` | Default entry: multiplier selector + number grid + specials + undo, and the shared `PlayerCardMinimal`, `EntryMethodBar`, `ScoreInputEntry` (whole-turn total) components. |
 | `CricketEntry.kt` | Cricket mark grid with `CricketMarkCanvas` (drawn `/`, `X`, `⊗` marks). |
 | `VoiceRecognitionScreen.kt` | Mic UI with pulse animation, live transcript/feedback, command reference; delegates to `VoiceInputManager`. |
@@ -252,16 +252,25 @@ Worth knowing before someone else finds them:
     repeated scan of the same token. Without those guards Nearby returns
     `STATUS_ALREADY_DISCOVERED (8002)`, which is what the ML Kit analyzer used to trigger by
     delivering the same QR code on every camera frame.
-13. **Nearby `Payload.fromBytes` is capped at 32 KB** (`ConnectionsClient.MAX_BYTES_DATA_SIZE`), but
-    `startNearbyAdvertising` sends the export **with** base64 photo/audio attachments, and
-    `NearbyManager` never checks the result of `sendPayload`. One captured photo will exceed the cap,
-    the send will fail silently, and the receiver will simply never see data. Transfers larger than
-    32 KB need `Payload.fromStream`. This is the next thing that will break in the sharing demo.
+13. **Nearby payload size is untested at scale.** `startNearbyAdvertising` sends the export **with**
+    base64 photo/audio attachments as a single `Payload.fromBytes`, and `NearbyManager` never checks
+    the result of `sendPayload`. A transfer carrying one avatar and one match photo has been verified
+    working end to end. Larger payloads have not been tried, and because the send result is
+    unchecked, a failure would surface only as "the receiver never got any data" — so if a big
+    transfer ever goes quiet, check the `sendPayload` task before looking anywhere else.
+    `Payload.fromStream` is the documented route for large transfers.
 14. **Career stats are only imported for players the import creates.** If a username already exists
     locally, the local totals are kept — both devices recorded the same matches, so adding or
     overwriting them would corrupt the numbers. Player identity across devices is matched by
     username, so two different people sharing a username merge into one profile.
-15. **Gson does not apply Kotlin default values for absent JSON fields.** A `.darts` file produced
+15. **Two declarations are still in a file that does not own them**, because there is no existing file
+    that fits and the project avoids adding new ones: `BoardButtonsScreen.kt` also holds
+    `PlayerCardMinimal`, `EntryMethodBar` and `ScoreInputEntry` (used by `GameScreen`, not by the
+    board-buttons pad), and `PlayersScreen.kt` opens with two avatar file-I/O helpers.
+16. **`SettingsDropdownRow` exists twice in package `ui.screens`** — in `SettingsScreen.kt` (5 params)
+    and `GameSettingsScreen.kt` (7 params, extra styling). Legal as overloads, but the call site gives
+    no hint which one it resolves to.
+17. **Gson does not apply Kotlin default values for absent JSON fields.** A `.darts` file produced
     before `attachments`/`careerStats` existed deserialises those lists as `null`, and `importPayload`
     will NPE on them (reported as "Export payload is missing required sections"). Only relevant if
     you test with an old export file.

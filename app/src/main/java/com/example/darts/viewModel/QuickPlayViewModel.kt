@@ -6,7 +6,6 @@ import com.example.darts.db.entities.Game
 import com.example.darts.db.repositories.BattleRepository
 import com.example.darts.db.repositories.GameRepository
 import com.example.darts.repository.SettingsRepository
-import com.example.darts.ui.screens.QuickGameMode
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
 import javax.inject.Inject
