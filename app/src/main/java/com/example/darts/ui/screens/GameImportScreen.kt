@@ -33,11 +33,13 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import com.example.darts.viewModel.GameImportViewModel
 import com.example.darts.viewModel.ImportUiEvent
+import com.google.mlkit.vision.barcode.BarcodeScanner
 import com.google.mlkit.vision.barcode.BarcodeScannerOptions
 import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.common.InputImage
 import kotlinx.coroutines.flow.collectLatest
+import java.util.concurrent.atomic.AtomicBoolean
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -286,6 +288,25 @@ fun QrCameraScanner(
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
 
+    // A QR code sits in front of the lens for many frames, so the analyzer fires
+    // repeatedly for the same code. Deliver only the first hit: a second delivery
+    // restarts Nearby discovery and fails with STATUS_ALREADY_DISCOVERED (8002).
+    val hasDelivered = remember { AtomicBoolean(false) }
+
+    // The camera is bound to the screen lifecycle, so it keeps analysing frames after
+    // this composable leaves composition unless we unbind it explicitly.
+    val boundProvider = remember { mutableStateOf<ProcessCameraProvider?>(null) }
+    val boundScanner = remember { mutableStateOf<BarcodeScanner?>(null) }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            boundProvider.value?.unbindAll()
+            boundScanner.value?.close()
+            boundProvider.value = null
+            boundScanner.value = null
+        }
+    }
+
     AndroidView(
         modifier = Modifier.fillMaxSize(),
         factory = { ctx ->
@@ -329,7 +350,7 @@ fun QrCameraScanner(
                         scanner.process(image)
                             .addOnSuccessListener { barcodes ->
                                 val value = barcodes.firstOrNull()?.rawValue
-                                if (!value.isNullOrEmpty()) {
+                                if (!value.isNullOrEmpty() && hasDelivered.compareAndSet(false, true)) {
                                     onResult(value)
                                 }
                             }
@@ -349,8 +370,11 @@ fun QrCameraScanner(
                         preview,
                         analysis
                     )
+                    boundProvider.value = cameraProvider
+                    boundScanner.value = scanner
                 } catch (e: Exception) {
                     Log.e("QR", "Camera bind failed", e)
+                    scanner.close()
                 }
 
             }, ContextCompat.getMainExecutor(ctx))

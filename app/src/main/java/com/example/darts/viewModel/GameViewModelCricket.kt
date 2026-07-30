@@ -1,8 +1,6 @@
 package com.example.darts.viewModel
 
-import android.os.Build
 import android.util.Log
-import androidx.annotation.RequiresApi
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.darts.db.entities.Moment
@@ -14,7 +12,6 @@ import com.example.darts.db.repositories.MomentRepository
 import com.example.darts.db.repositories.StatRepository
 import com.example.darts.engine.DartThrow
 import com.example.darts.engine.GameEngineCricket
-import com.example.darts.engine.Multiplier
 import com.example.darts.engine.Turn
 import com.example.darts.ui.screens.score_entry.EntryMethod
 import com.example.darts.viewModel.states.DartSlotState
@@ -138,7 +135,6 @@ class GameViewModelCricket @Inject constructor(
     )
 
     override fun addDart(dart: DartThrow) {
-        Log.d("Cricket Viewmodel", "Dart Add")
         if (currentDarts.size >= 3 || _displayState.value.isFinished) return
         currentDarts.add(dart)
         refresh() // Update slots and mark preview
@@ -151,11 +147,10 @@ class GameViewModelCricket @Inject constructor(
         }
     }
 
-    @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
     override fun undoLastDart() {
         if (currentDarts.isNotEmpty()) currentDarts.removeAt(currentDarts.size - 1)
         else {
-            val (newState, turn) = engine.undoTurn()
+            val (_, turn) = engine.undoTurn()
             for (dart in turn.darts.dropLast(1)) {
                 currentDarts.add(dart)
             }
@@ -285,15 +280,12 @@ class GameViewModelCricket @Inject constructor(
                 gameRepository.markGameFinished(gameId)
                 _navigationEvents.emit(GameNavigationEvent.MatchSummary(gameId))
             } else {
-                val showLegSummary = true
-                if (showLegSummary) {
-                    _navigationEvents.emit(
-                        GameNavigationEvent.LegSummary(
-                            gameId = gameId,
-                            legNumber = newState.completedLegNumber
-                        )
+                _navigationEvents.emit(
+                    GameNavigationEvent.LegSummary(
+                        gameId = gameId,
+                        legNumber = newState.completedLegNumber
                     )
-                }
+                )
             }
         }
     }

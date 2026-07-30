@@ -157,7 +157,7 @@ class GameViewModelX01 @Inject constructor(
         if (currentDarts.isNotEmpty()) {
             currentDarts.removeAt(currentDarts.size - 1)
         } else {
-            val (newState, lastTurn) = engine.undoTurn()
+            val (_, lastTurn) = engine.undoTurn()
             for (dart in lastTurn.darts.dropLast(1)) {
                 currentDarts.add(dart)
             }
@@ -238,20 +238,17 @@ class GameViewModelX01 @Inject constructor(
             )
 
             if (newState.isFinished) {
-                val jsnoHistory = Gson().toJson(_turnHistory.value)
-                gameRepository.saveGameHistory(gameId, jsnoHistory)
+                val jsonHistory = Gson().toJson(_turnHistory.value)
+                gameRepository.saveGameHistory(gameId, jsonHistory)
                 gameRepository.markGameFinished(gameId)
                 _navigationEvents.emit(GameNavigationEvent.MatchSummary(gameId))
             } else {
-                val showLegSummary = true
-                if (showLegSummary) {
-                    _navigationEvents.emit(
-                        GameNavigationEvent.LegSummary(
-                            gameId = gameId,
-                            legNumber = newState.completedLegNumber
-                        )
+                _navigationEvents.emit(
+                    GameNavigationEvent.LegSummary(
+                        gameId = gameId,
+                        legNumber = newState.completedLegNumber
                     )
-                }
+                )
             }
         }
     }

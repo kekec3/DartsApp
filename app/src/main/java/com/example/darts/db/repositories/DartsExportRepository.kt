@@ -3,6 +3,8 @@ package com.example.darts.repository
 import android.content.Context
 import android.net.Uri
 import android.util.Base64
+import androidx.room.withTransaction
+import com.example.darts.db.DartsDatabase
 import com.example.darts.db.dao.StatDao
 import com.example.darts.db.daos.BattleDAO
 import com.example.darts.db.daos.GameDAO
@@ -19,12 +21,14 @@ import kotlinx.coroutines.flow.firstOrNull
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
+import java.util.UUID
 import java.util.zip.GZIPInputStream
 import java.util.zip.GZIPOutputStream
 import javax.inject.Inject
 
 class DartsExportRepository @Inject constructor(
     @ApplicationContext private val context: Context,
+    private val database: DartsDatabase,
     private val playerDao: PlayerDAO,
     private val battleDao: BattleDAO,
     private val gameDao: GameDAO,
@@ -133,50 +137,107 @@ class DartsExportRepository @Inject constructor(
     }
 
     /**
-     * Commits incoming data graph and safely handles optional attachments.
+     * Commits the incoming data graph.
+     *
+     * The payload carries the *sending* device's primary keys, which almost always
+     * collide with local ones (both devices number from 1). Reusing them made
+     * `insertBattle` fail with a UNIQUE constraint violation, and would have bound
+     * imported games to unrelated local battles had it not. So every row is inserted
+     * with id = 0 to get a fresh local id, and child references are translated through
+     * old → new maps built as we go.
+     *
+     * The whole graph goes in one transaction: a failure half-way used to leave
+     * orphaned players behind.
      */
     suspend fun importPayload(payload: PlayerExportPayload) {
-        // LAYER 1: Rebuild and map Player Profiles with fresh localized avatar files
-        payload.players.forEach { player ->
-            val avatarAsset = payload.attachments.find { it.momentType == "AVATAR" && it.idMoment == player.idPlayer }
+        // Decode media to disk *before* opening the transaction — base64 decoding of
+        // photos would otherwise hold the write lock for its whole duration.
+        val avatarPaths = mutableMapOf<Int, String>()   // original playerId -> local file
+        val momentPaths = mutableMapOf<Int, String>()   // original momentId -> local file
 
-            val localAvatarPath = if (avatarAsset != null) {
-                val freshFile = saveBase64ToFile(avatarAsset.fileName, avatarAsset.base64Data)
-                freshFile?.absolutePath ?: player.avatar
+        payload.attachments.forEach { asset ->
+            val file = saveBase64ToFile(asset.fileName, asset.base64Data) ?: return@forEach
+            if (asset.momentType == "AVATAR") {
+                avatarPaths[asset.idMoment] = file.absolutePath
             } else {
-                player.avatar
+                momentPaths[asset.idMoment] = file.absolutePath
             }
-            playerDao.addPlayer(player.copy(avatar = localAvatarPath))
         }
 
-        // LAYER 2: Core Battles
-        payload.battles.forEach { battle -> battleDao.insertBattle(battle) }
+        database.withTransaction {
+            val playerIdMap = mutableMapOf<Int, Int>()
+            val battleIdMap = mutableMapOf<Int, Int>()
+            val gameIdMap = mutableMapOf<Int, Int>()
 
-        // LAYER 3: Junction dependencies
-        payload.participations.forEach { participation -> participateDao.addParticipation(participation) }
+            // Original ids of players this import actually created, as opposed to
+            // matched against someone already on this device.
+            val createdPlayers = mutableSetOf<Int>()
 
-        // LAYER 4: Games
-        payload.games.forEach { game -> gameDao.addGame(game) }
-
-        // LAYER 5: Rebuild Moment Files and map paths safely
-        payload.moments.forEach { moment ->
-            val fileAsset = payload.attachments.find {
-                it.idMoment == moment.idMoment && (it.momentType == "PHOTO" || it.momentType == "AUDIO")
+            // LAYER 1: Players — matched by username so importing the same friend
+            // twice does not create a second profile.
+            payload.players.forEach { player ->
+                val existing = playerDao.getPlayerByUsername(player.username)
+                if (existing != null) {
+                    playerIdMap[player.idPlayer] = existing.idPlayer
+                } else {
+                    val avatar = avatarPaths[player.idPlayer] ?: player.avatar
+                    playerIdMap[player.idPlayer] =
+                        playerDao.addPlayer(player.copy(idPlayer = 0, avatar = avatar)).toInt()
+                    createdPlayers.add(player.idPlayer)
+                }
             }
 
-            val updatedContentValue = if (fileAsset != null) {
-                val freshLocalFile = saveBase64ToFile(fileAsset.fileName, fileAsset.base64Data)
-                freshLocalFile?.absolutePath ?: moment.contentValue
-            } else {
-                moment.contentValue
+            // LAYER 2: Battles
+            payload.battles.forEach { battle ->
+                battleIdMap[battle.idBattle] =
+                    battleDao.insertBattle(battle.copy(idBattle = 0)).toInt()
             }
-            momentDao.insertMoment(moment.copy(contentValue = updatedContentValue))
-        }
 
-        // LAYER 6: Final Statistics
-        statDao.insertLegStats(payload.legStats)
-        payload.careerStats.forEach { careerStat ->
-            statDao.insertOrReplaceCareerStats(careerStat)
+            // LAYER 3: Junction rows
+            payload.participations.forEach { participation ->
+                val playerId = playerIdMap[participation.idPlayer] ?: return@forEach
+                val battleId = battleIdMap[participation.idBattle] ?: return@forEach
+                participateDao.addParticipation(
+                    participation.copy(idPlayer = playerId, idBattle = battleId)
+                )
+            }
+
+            // LAYER 4: Games. `history` holds turn summaries keyed by player *name*,
+            // so it needs no remapping.
+            payload.games.forEach { game ->
+                val battleId = battleIdMap[game.idBattle] ?: return@forEach
+                gameIdMap[game.idGame] =
+                    gameDao.addGame(game.copy(idGame = 0, idBattle = battleId)).toInt()
+            }
+
+            // LAYER 5: Moments, repointed at the freshly written local media files
+            payload.moments.forEach { moment ->
+                val gameId = gameIdMap[moment.idGame] ?: return@forEach
+                momentDao.insertMoment(
+                    moment.copy(
+                        idMoment = 0,
+                        idGame = gameId,
+                        contentValue = momentPaths[moment.idMoment] ?: moment.contentValue
+                    )
+                )
+            }
+
+            // LAYER 6: Statistics
+            val legStats = payload.legStats.mapNotNull { stat ->
+                val gameId = gameIdMap[stat.gameId] ?: return@mapNotNull null
+                val playerId = playerIdMap[stat.playerId] ?: return@mapNotNull null
+                stat.copy(id = 0, gameId = gameId, playerId = playerId)
+            }
+            statDao.insertLegStats(legStats)
+
+            // Career totals are taken only for players this import created. For a
+            // player who already existed here, local totals win: both devices recorded
+            // the same matches, so overwriting or adding would corrupt the numbers.
+            payload.careerStats.forEach { careerStat ->
+                if (careerStat.playerId !in createdPlayers) return@forEach
+                val playerId = playerIdMap[careerStat.playerId] ?: return@forEach
+                statDao.insertOrReplaceCareerStats(careerStat.copy(playerId = playerId))
+            }
         }
     }
 
@@ -213,7 +274,11 @@ class DartsExportRepository @Inject constructor(
 
     private fun saveBase64ToFile(fileName: String, base64Data: String): File? {
         return try {
-            val targetFile = File(context.filesDir, fileName)
+            // Attachment names are derived from the sending device's row ids
+            // ("avatar_player_3.jpg"), so importing two different people's data would
+            // have them overwrite each other's media. Namespace every imported file.
+            val unique = UUID.randomUUID().toString().take(8)
+            val targetFile = File(context.filesDir, "${unique}_$fileName")
             val fileBytes = Base64.decode(base64Data, Base64.NO_WRAP)
             FileOutputStream(targetFile).use { fos ->
                 fos.write(fileBytes)

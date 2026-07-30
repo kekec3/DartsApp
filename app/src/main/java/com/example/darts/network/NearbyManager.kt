@@ -6,7 +6,9 @@ import com.google.android.gms.nearby.connection.*
 import java.nio.charset.StandardCharsets
 
 class NearbyManager(context: Context) {
-    private val connectionsClient = Nearby.getConnectionsClient(context)
+    // applicationContext: this manager is held by an activity-scoped ViewModel and
+    // must not outlive-and-leak the Activity it was created from.
+    private val connectionsClient = Nearby.getConnectionsClient(context.applicationContext)
     private val SERVICE_ID = "com.example.darts.NEARBY_SERVICE"
 
     // 1. ADVERTISING (Sender broadcasts using the generated Token as its name)
@@ -47,11 +49,26 @@ class NearbyManager(context: Context) {
     fun startDiscovery(targetToken: String, onPayloadReceived: (String) -> Unit, onStatus: (String) -> Unit) {
         val discoveryOptions = DiscoveryOptions.Builder().setStrategy(Strategy.P2P_POINT_TO_POINT).build()
 
+        // Nearby allows only one discovery session per service id: a second
+        // startDiscovery call is rejected with STATUS_ALREADY_DISCOVERED (8002).
+        // Tearing down any previous session makes a re-scan safe.
+        connectionsClient.stopDiscovery()
+
+        // onEndpointFound can fire more than once for the same host; only request
+        // the connection once, otherwise Nearby rejects the duplicate request.
+        var requestedEndpointId: String? = null
+
         val discoveryCallback = object : EndpointDiscoveryCallback() {
             override fun onEndpointFound(endpointId: String, info: DiscoveredEndpointInfo) {
                 // CRITICAL: Verify if this is the device we scanned!
                 if (info.endpointName == targetToken) {
+                    if (requestedEndpointId != null) return
+                    requestedEndpointId = endpointId
+
                     onStatus("Found matching host! Requesting connection...")
+
+                    // We found our target; no reason to keep the radio scanning.
+                    connectionsClient.stopDiscovery()
 
                     connectionsClient.requestConnection("ReceiverName", endpointId, object : ConnectionLifecycleCallback() {
                         override fun onConnectionInitiated(endpointId: String, info: ConnectionInfo) {
@@ -82,6 +99,7 @@ class NearbyManager(context: Context) {
                         }
 
                         override fun onDisconnected(endpointId: String) {
+                            requestedEndpointId = null
                             onStatus("Sender Disconnected")
                         }
                     })

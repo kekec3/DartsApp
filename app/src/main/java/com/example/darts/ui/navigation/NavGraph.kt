@@ -206,7 +206,6 @@ fun DartsNavGraph(
             }
             GameScreen(
                 viewModel = viewModel,
-                gameId    = args.gameId,
                 onLegSummary = { gameId, legNumber ->
                     viewModel.consumeNavigationEvent()
                     navController.navigate(LegSummaryRoute(gameId = gameId, legNumber = legNumber))
@@ -241,7 +240,6 @@ fun DartsNavGraph(
             }
             GameScreen(
                 viewModel = viewModel,
-                gameId    = args.gameId,
                 onLegSummary = { gameId, legNumber ->
                     viewModel.consumeNavigationEvent()
                     navController.navigate(LegSummaryRoute(gameId = gameId, legNumber = legNumber))

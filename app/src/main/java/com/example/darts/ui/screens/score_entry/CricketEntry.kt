@@ -1,6 +1,5 @@
 package com.example.darts.ui.screens.score_entry
 
-import android.util.Log
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable

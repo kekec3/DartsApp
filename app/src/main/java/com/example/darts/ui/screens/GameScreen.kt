@@ -1,8 +1,6 @@
 package com.example.darts.ui.screens
 
-import android.os.Build
 import androidx.activity.compose.BackHandler
-import androidx.annotation.RequiresApi
 import androidx.compose.animation.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
@@ -52,13 +50,10 @@ val HeaderWhite    = Color.White
 val MethodBarBg    = Color(0xFF121712)   // BlackSecondary from theme
 val DividerColor   = Color(0xFF2A2F2A)   // Divider from theme
 
-@RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
 @Composable
 fun GameScreen(
     viewModel: BaseGameViewModel,
     onNavigateBack: () -> Unit = {},
-    onNavigateStats: () -> Unit = {},
-    gameId: Int,
     onLegSummary: (Int, Int) -> Unit,
     onMatchSummary: (Int) -> Unit
 ) {
@@ -551,58 +546,6 @@ private fun DartSlotCell(
                 tint = LimePrimary.copy(alpha = 0.40f),
                 modifier = Modifier.size(22.dp)
             )
-        }
-    }
-}
-
-// ── Winner screen ─────────────────────────────────────────────────────────────
-
-@Composable
-private fun WinnerScreen(winnerName: String, onBack: () -> Unit) {
-    Box(
-        modifier         = Modifier
-            .fillMaxSize()
-            .background(ScreenBg),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-            modifier            = Modifier.padding(horizontal = 40.dp)
-        ) {
-            Icon(
-                Icons.Default.EmojiEvents,
-                contentDescription = null,
-                tint     = Color(0xFFFFD700),
-                modifier = Modifier.size(96.dp)
-            )
-            Text(
-                "GAME SHOT!",
-                color         = Color.White,
-                fontSize      = 32.sp,
-                fontWeight    = FontWeight.ExtraBold,
-                letterSpacing = 2.sp
-            )
-            Text(
-                winnerName.uppercase(),
-                color      = LimePrimary,
-                fontSize   = 24.sp,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(Modifier.height(8.dp))
-            Button(
-                onClick  = onBack,
-                colors   = ButtonDefaults.buttonColors(containerColor = LimePrimary),
-                shape    = RoundedCornerShape(14.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(
-                    "Back to Menu",
-                    fontWeight = FontWeight.Bold,
-                    fontSize   = 16.sp,
-                    color      = Color(0xFF0B0F0C)
-                )
-            }
         }
     }
 }
