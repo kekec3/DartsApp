@@ -9,16 +9,21 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -31,6 +36,7 @@ import com.example.darts.viewModel.GameSettings
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
+import com.example.darts.R
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class)
 @Composable
@@ -285,26 +291,20 @@ fun GameSettingsScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
             LocationStatusBox(
                 trackLocation = config.trackLocation,
                 isGranted = locationPermissionState.status.isGranted,
                 gpsStatus = gpsStatus
             )
-        }
 
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(Color.Black)
-                .padding(horizontal = 20.dp, vertical = 24.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+            Spacer(modifier = Modifier.height(16.dp))
+
             TextButton(
                 onClick = { viewModel.resetToDefaults() },
-                colors = ButtonDefaults.textButtonColors(contentColor = Color.Gray)
+                colors = ButtonDefaults.textButtonColors(contentColor = Color.Gray),
+                modifier = Modifier.align(Alignment.CenterHorizontally)
             ) {
                 Text(
                     text = "RESET DEFAULTS",
@@ -313,32 +313,93 @@ fun GameSettingsScreen(
                     letterSpacing = 1.sp
                 )
             }
+        }
 
-            Button(
-                enabled = !isCreating,
-                onClick = {
-                    if (config.trackLocation) {
-                        if (!locationPermissionState.status.isGranted) {
-                            locationPermissionState.launchPermissionRequest()
-                        } else if (!isGpsEnabled()) {
-                            context.startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 20.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(60.dp)
+                    .clip(CircleShape)
+                    .background(
+                        if (isCreating) {
+                            Brush.horizontalGradient(listOf(Color.Gray, Color.DarkGray))
+                        } else {
+                            Brush.horizontalGradient(
+                                listOf(
+                                    Color(0xFF8CDB00),
+                                    Color(0xFF5CA300)
+                                )
+                            )
+                        }
+                    )
+                    .clickable(enabled = !isCreating) {
+                        if (config.trackLocation) {
+                            if (!locationPermissionState.status.isGranted) {
+                                locationPermissionState.launchPermissionRequest()
+                            } else if (!isGpsEnabled()) {
+                                context.startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))
+                            } else {
+                                runGameCreation(battleId, config, viewModel, onStartMatch, context)
+                            }
                         } else {
                             runGameCreation(battleId, config, viewModel, onStartMatch, context)
                         }
-                    } else {
-                        runGameCreation(battleId, config, viewModel, onStartMatch, context)
                     }
-                },
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = if (isCreating) Color.Gray else Color(0xFF76B947)
-                ),
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier.width(160.dp).height(48.dp)
             ) {
-                if (isCreating) {
-                    CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color.Black, strokeWidth = 3.dp)
-                } else {
-                    Text("START MATCH", fontWeight = FontWeight.ExtraBold, color = Color.Black, fontSize = 14.sp)
+                // Watermarked Dart XML bleeding off the right edge
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_dart),
+                    contentDescription = null,
+                    tint = Color.Black.copy(alpha = 0.14f),
+                    modifier = Modifier
+                        .align(Alignment.CenterEnd)
+                        .offset(x = 14.dp, y = 2.dp)
+                        .size(110.dp)
+                )
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // High-contrast dark badge with icon or loading indicator
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .background(Color(0xFF0B0F0C), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (isCreating) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(20.dp),
+                                color = Color(0xFF8CDB00),
+                                strokeWidth = 3.dp
+                            )
+                        } else {
+                            Icon(
+                                imageVector = Icons.Default.PlayArrow,
+                                contentDescription = null,
+                                tint = Color(0xFF8CDB00),
+                                modifier = Modifier.size(28.dp)
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.width(16.dp))
+
+                    Text(
+                        text = "START MATCH",
+                        color = Color(0xFF0B0F0C),
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = 1.sp
+                    )
                 }
             }
         }

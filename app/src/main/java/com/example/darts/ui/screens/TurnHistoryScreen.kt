@@ -16,9 +16,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.darts.ui.CardInactive
-import com.example.darts.ui.DividerColor
-import com.example.darts.ui.ScreenBg
 import com.example.darts.ui.theme.LimePrimary
 import com.example.darts.ui.theme.TextSecondary
 import com.example.darts.viewModel.TurnSummary

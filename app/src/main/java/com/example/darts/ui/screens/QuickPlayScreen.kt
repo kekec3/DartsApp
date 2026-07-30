@@ -1,21 +1,26 @@
 package com.example.darts.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.darts.ui.ScreenBg
 import com.example.darts.ui.theme.LimePrimary
+import com.example.darts.R
 
 enum class QuickGameMode { X01, CRICKET }
 
@@ -139,22 +144,63 @@ fun QuickPlaySettingsScreen(
             Spacer(modifier = Modifier.weight(1f))
 
             // Start Button
-            Button(
-                onClick = { onStartGame(playerCount, selectedMode) },
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(58.dp),
-                shape = CircleShape,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = LimePrimary,
-                    contentColor = Color.Black
-                )
+                    .height(64.dp)
+                    .clip(CircleShape)
+                    .background(
+                        Brush.horizontalGradient(
+                            colors = listOf(
+                                LimePrimary,
+                                Color(0xFF5CA300)
+                            )
+                        )
+                    )
+                    .clickable { onStartGame(playerCount, selectedMode) }
             ) {
-                Text(
-                    text = "PLAY NOW",
-                    fontWeight = FontWeight.ExtraBold,
-                    fontSize = 18.sp
+                // Watermarked Dart XML bleeding off the right edge
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_dart),
+                    contentDescription = null,
+                    tint = Color.Black.copy(alpha = 0.14f),
+                    modifier = Modifier
+                        .align(Alignment.CenterEnd)
+                        .offset(x = 14.dp, y = 2.dp)
+                        .size(110.dp)
                 )
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // High-contrast dark play badge
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .background(Color(0xFF0B0F0C), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.PlayArrow,
+                            contentDescription = null,
+                            tint = LimePrimary,
+                            modifier = Modifier.size(28.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(16.dp))
+
+                    Text(
+                        text = "PLAY NOW",
+                        color = Color(0xFF0B0F0C),
+                        fontSize = 19.sp,
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = 1.sp
+                    )
+                }
             }
         }
     }

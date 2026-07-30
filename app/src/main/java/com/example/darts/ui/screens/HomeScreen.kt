@@ -7,6 +7,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
@@ -14,6 +15,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -22,6 +24,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.darts.R
+import com.example.darts.utils.DartShape
 
 // -------------------- ICONS --------------------
 
@@ -102,7 +105,6 @@ fun HomeScreen(
             PrimaryActionButton(
                 text = "START GAME",
                 subtitle = "New 501 or Cricket match",
-                icon = Icons.Default.PlayArrow,
                 onClick = onStartGame
             )
 
@@ -131,49 +133,74 @@ fun HomeScreen(
 
 @Composable
 fun PrimaryActionButton(
-    text: String,
-    subtitle: String,
-    icon: ImageVector,
+    text: String = "START GAME",
+    subtitle: String = "New 501 or Cricket match",
     onClick: () -> Unit
 ) {
-    Row(
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
-            .background(Color(0xFF76B947))
+            .height(104.dp)
+            .clip(RoundedCornerShape(24.dp))
+            .background(
+                Brush.horizontalGradient(
+                    colors = listOf(
+                        Color(0xFF8CDB00),
+                        Color(0xFF5CA300)
+                    )
+                )
+            )
             .clickable { onClick() }
-            .padding(horizontal = 24.dp, vertical = 26.dp),
-        verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(
+        // Watermarked Dart XML bleeding off the right edge
+        Icon(
+            painter = painterResource(id = R.drawable.ic_dart),
+            contentDescription = null,
+            tint = Color.Black.copy(alpha = 0.14f),
             modifier = Modifier
-                .size(48.dp)
-                .background(Color.Black.copy(alpha = 0.15f), RoundedCornerShape(12.dp)),
-            contentAlignment = Alignment.Center
+                .align(Alignment.CenterEnd)
+                .offset(x = 16.dp, y = 4.dp)
+                .size(130.dp)
+        )
+
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 20.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = Color.Black,
-                modifier = Modifier.size(32.dp)
-            )
-        }
+            // High-contrast dark play badge
+            Box(
+                modifier = Modifier
+                    .size(54.dp)
+                    .background(Color(0xFF0B0F0C), RoundedCornerShape(16.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.PlayArrow,
+                    contentDescription = null,
+                    tint = Color(0xFF8CDB00),
+                    modifier = Modifier.size(34.dp)
+                )
+            }
 
-        Spacer(modifier = Modifier.width(20.dp))
+            Spacer(modifier = Modifier.width(18.dp))
 
-        Column {
-            Text(
-                text = text,
-                color = Color.Black,
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Black
-            )
-            Text(
-                text = subtitle,
-                color = Color.Black.copy(alpha = 0.7f),
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Medium
-            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = text,
+                    color = Color(0xFF0B0F0C),
+                    fontSize = 21.sp,
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = 0.5.sp
+                )
+                Text(
+                    text = subtitle,
+                    color = Color(0xFF0B0F0C).copy(alpha = 0.75f),
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
         }
     }
 }

@@ -12,8 +12,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
-import com.example.darts.db.entities.Game
-import com.example.darts.ui.GameScreen
+import com.example.darts.ui.screens.GameScreen
 import com.example.darts.ui.screens.*
 import com.example.darts.viewModel.BaseGameViewModel
 import com.example.darts.viewModel.CricketConfig

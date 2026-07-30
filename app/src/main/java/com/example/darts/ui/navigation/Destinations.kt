@@ -1,6 +1,5 @@
 package com.example.darts.ui.navigation
 
-import com.example.darts.db.entities.Game
 import kotlinx.serialization.Serializable
 
 @Serializable object SplashRoute

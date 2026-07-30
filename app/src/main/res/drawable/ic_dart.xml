@@ -1,0 +1,23 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Softened Logo-Style Dart -->
+    <path
+        android:fillColor="#8CDB00"
+        android:pathData="M 14,54
+                  C 18,42 14,26 8,18
+                  C 6,14 12,12 22,17
+                  L 42,32
+                  C 48,34 54,38 66,38
+                  C 80,38 90,46 101,51
+                  C 104,52.5 104,55.5 101,57
+                  C 90,62 80,70 66,70
+                  C 54,70 48,74 42,76
+                  L 22,91
+                  C 12,96 6,94 8,90
+                  C 14,82 18,66 14,54
+                  Z" />
+</vector>

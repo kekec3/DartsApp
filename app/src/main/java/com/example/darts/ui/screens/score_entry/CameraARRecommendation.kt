@@ -50,6 +50,17 @@ fun CameraArRecommendationScreen(
     val checkoutPath = remember(remainingScore) {
         DartRecommendationEngine.getBestCheckout(remainingScore)
     }
+
+    // Validates whether the path actually finishes the remaining score on a double / bull
+    val hasValidOutshot = remember(remainingScore, checkoutPath) {
+        if (checkoutPath == null || checkoutPath.darts.isEmpty()) return@remember false
+        val totalScore = checkoutPath.darts.sumOf { it.score }
+        val lastDart = checkoutPath.darts.last()
+        val endsOnDouble = lastDart.isDouble || lastDart.name == "BULL"
+        totalScore == remainingScore && endsOnDouble
+    }
+
+    val darts = if (hasValidOutshot) checkoutPath?.darts ?: emptyList() else emptyList()
     val textMeasurer = rememberTextMeasurer()
 
     LaunchedEffect(Unit) {
@@ -125,15 +136,14 @@ fun CameraArRecommendationScreen(
                 style = Stroke(width = 3f)
             )
 
-            val darts = checkoutPath?.darts ?: emptyList()
-
-            val activeDartIndex = masterTimeline.toInt().coerceIn(0, maxOf(0, darts.lastIndex))
+            val activeDartIndex = if (darts.isNotEmpty()) masterTimeline.toInt().coerceIn(0, darts.lastIndex) else 0
             val currentStageTimeline = masterTimeline - activeDartIndex
 
             val lockOnProgress = (currentStageTimeline / 0.25f).coerceIn(0f, 1f)
             val flightProgress = ((currentStageTimeline - 0.25f) / 0.45f).coerceIn(0f, 1f)
             val impactProgress = ((currentStageTimeline - 0.70f) / 0.30f).coerceIn(0f, 1f)
 
+            // Render targets only if a valid outshot exists
             darts.forEachIndexed { index, dartTarget ->
                 val isTargetActiveNow = index == activeDartIndex
                 val hasBeenThrown = index < activeDartIndex
@@ -153,14 +163,12 @@ fun CameraArRecommendationScreen(
 
                 val startAngle = dartTarget.angle - 9f
 
-                // Render Vertical 3D Solid Target Blocks (Kept completely untouched)
                 if (dartTarget.name == "BULL") {
                     drawAR3DCircle(center, targetOuterR, targetColor, currentLockProgress)
                 } else {
                     drawAR3DBlock(center, startAngle, 18f, targetInnerR, targetOuterR, targetColor, currentLockProgress)
                 }
 
-                // Calculate targeted intersection coordinate points
                 val targetDist = (targetInnerR + targetOuterR) / 2f
                 val rad = Math.toRadians(dartTarget.angle.toDouble())
                 val targetHit = if (dartTarget.name == "BULL") center else
@@ -168,18 +176,14 @@ fun CameraArRecommendationScreen(
 
                 drawLockOnBrackets(targetHit, currentLockProgress, isTargetActiveNow)
 
-                // 3. Floating Yellow 3D Multiplier (Positioned directly ABOVE the block, not over-stretched)
                 if (dartTarget.isDouble || dartTarget.isTriple) {
                     val labelText = if (dartTarget.isTriple) "x3" else "x2"
                     val block3DHeightOffset = currentLockProgress * -25f
-
-                    // Added -55f extra buffer so it sits perfectly in free space above the block height
                     val multiplierPos = targetHit + Offset(0f, block3DHeightOffset - 55f)
 
                     drawHighVisYellowMultiplier(textMeasurer, labelText, multiplierPos, currentLockProgress)
                 }
 
-                // 4. Thickened Laser Vector Flight Tracking Architecture
                 val handOrigin = Offset(size.width / 2f, size.height + 150f)
 
                 if (isTargetActiveNow && currentStageTimeline >= 0.25f) {
@@ -190,7 +194,6 @@ fun CameraArRecommendationScreen(
                     val currentPos = Offset(currentX, currentY)
 
                     if (flightProgress > 0.0f) {
-                        // Outer neon aura trail
                         drawLine(
                             color = targetColor.copy(alpha = 0.25f * (1f - impactProgress)),
                             start = handOrigin,
@@ -198,7 +201,6 @@ fun CameraArRecommendationScreen(
                             strokeWidth = 24f,
                             cap = StrokeCap.Round
                         )
-                        // Medium tracking core beam
                         drawLine(
                             color = targetColor.copy(alpha = 0.6f * (1f - impactProgress)),
                             start = handOrigin,
@@ -206,7 +208,6 @@ fun CameraArRecommendationScreen(
                             strokeWidth = 12f,
                             cap = StrokeCap.Round
                         )
-                        // High intensity center line
                         drawLine(
                             color = Color.White.copy(alpha = 0.9f * (1f - impactProgress)),
                             start = handOrigin,
@@ -215,7 +216,6 @@ fun CameraArRecommendationScreen(
                             cap = StrokeCap.Round
                         )
 
-                        // Head tip tracking point indicators
                         drawCircle(
                             color = Color.White,
                             radius = 8f,
@@ -246,8 +246,8 @@ fun CameraArRecommendationScreen(
                 }
             }
 
-            // 5. Global Diagnostics HUD Feed Overlay
-            drawGlobalHUDSystemPanel(textMeasurer, darts, activeDartIndex, currentStageTimeline)
+            // Fixed Global HUD System Panel Overlay
+            drawGlobalHUDSystemPanel(textMeasurer, darts, activeDartIndex, remainingScore)
         }
 
         IconButton(onClick = onClose, modifier = Modifier.align(Alignment.TopEnd).padding(16.dp)) {
@@ -347,12 +347,11 @@ private fun DrawScope.drawLockOnBrackets(target: Offset, lockProgress: Float, is
     drawLine(c, target + Offset(size, -size), target + Offset(size - 15f, -size), strokeWidth)
     drawLine(c, target + Offset(size, -size), target + Offset(size, -size + 15f), strokeWidth)
     drawLine(c, target + Offset(-size, size), target + Offset(-size + 15f, size), strokeWidth)
-    drawLine(c, target + Offset(-size, size), target + Offset(-size, size - 15f), strokeWidth)
+    drawLine(c, target + Offset(-size, size), target + Offset(-size, -size + 15f), strokeWidth)
     drawLine(c, target + Offset(size, size), target + Offset(size - 15f, size), strokeWidth)
     drawLine(c, target + Offset(size, size), target + Offset(size, size - 15f), strokeWidth)
 }
 
-// Custom 3D text renderer setup specifically with a tight extrusion mesh path for visibility clarity
 private fun DrawScope.drawHighVisYellowMultiplier(
     measurer: TextMeasurer,
     text: String,
@@ -360,7 +359,7 @@ private fun DrawScope.drawHighVisYellowMultiplier(
     progress: Float
 ) {
     val textStyle = TextStyle(
-        color = Color(0xFFFFEA00), // Pure cyber neon yellow
+        color = Color(0xFFFFEA00),
         fontSize = 29.sp,
         fontWeight = androidx.compose.ui.text.font.FontWeight.Black,
         fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
@@ -371,11 +370,9 @@ private fun DrawScope.drawHighVisYellowMultiplier(
     val textHeight = textLayoutResult.size.height.toFloat()
     val textTopLeft = position - Offset(textWidth / 2f, textHeight / 2f)
 
-    // Reduced total steps to 6 to compress the extrusion length and keep it looking balanced
     val tight3DDepthLayers = 6
     for (i in tight3DDepthLayers downTo 1) {
         val depthRatio = i / tight3DDepthLayers.toFloat()
-        // Tighter multiplier factor (8f) means layers stay neatly bunched right under the text cap
         val yOffset = depthRatio * 8f * progress
 
         val depthColorShading = Color(0xFFFFEA00).copy(alpha = 0.85f * progress).compositeOver(
@@ -389,7 +386,6 @@ private fun DrawScope.drawHighVisYellowMultiplier(
         }
     }
 
-    // Luminous white/yellow cap layer
     withTransform({
         translate(0f, 0f)
     }) {
@@ -402,53 +398,99 @@ private fun DrawScope.drawFloatingTelemetry(
     label: String, dartNum: Int, stageTime: Float, impactProgress: Float
 ) {
     if (stageTime < 0.20f) return
-    val textStyle = TextStyle(color = Color(0xFF00FFCC), fontSize = 10.sp, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace)
     val boxOffset = target + Offset(60f, -80f)
-    val accuracyMetric = if (stageTime >= 0.70f) "LOCKED" else "${(85f + (impactProgress * 14.8f)).coerceAtMost(99.8f)}%"
-
-    drawRoundRect(color = Color.Black.copy(0.7f), topLeft = boxOffset, size = Size(150f, 60f), cornerRadius = CornerRadius(4f))
-    drawRoundRect(color = Color(0xFF00FFCC).copy(0.4f), topLeft = boxOffset, size = Size(150f, 60f), style = Stroke(1f), cornerRadius = CornerRadius(4f))
-
-    drawText(measurer, "DART $dartNum: $label", boxOffset + Offset(10f, 6f), style = textStyle.copy(color = Color.White, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold))
-    drawText(measurer, "TRACKING: $accuracyMetric", boxOffset + Offset(10f, 24f), style = textStyle)
     drawLine(Color(0xFF00FFCC).copy(0.5f), target, boxOffset + Offset(0f, 30f), 1f)
 }
 
 private fun DrawScope.drawGlobalHUDSystemPanel(
-    measurer: TextMeasurer, darts: List<DartTarget>, activeIdx: Int, stageTime: Float
+    measurer: TextMeasurer,
+    darts: List<DartTarget>,
+    activeIdx: Int,
+    remainingScore: Int
 ) {
-    val textStyle = TextStyle(color = Color(0xFF00FFCC), fontSize = 11.sp, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace)
+    val baseTextStyle = TextStyle(
+        color = Color(0xFF00FFCC),
+        fontSize = 11.sp,
+        fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
+    )
 
-    val statusText = when {
-        stageTime < 0.25f -> "SYSTEM: LOCKING STEP ${activeIdx + 1}..."
-        stageTime < 0.70f -> "SYSTEM: BALLISTIC VECTOR ACTIVE [${activeIdx + 1}/3]"
-        else -> "SYSTEM: TARGET ${activeIdx + 1} ENGAGED"
-    }
+    val panelTopLeft = Offset(24f, 80f)
+    val paddingHorizontal = 16f
+    val paddingVertical = 12f
+    val itemSpacing = 6f
 
-    drawText(measurer, statusText, Offset(40f, 60f), style = textStyle.copy(fontSize = 13.sp, color = Color.White))
-    drawText(measurer, "MATH AR ENGINE OVERLAY V3.5 // SEQUENCED MODE", Offset(40f, 90f), style = textStyle.copy(color = Color.White.copy(0.4f)))
+    val hasOutshot = darts.isNotEmpty()
 
-    val panelTopLeft = Offset(40f, 130f)
-    drawRoundRect(color = Color.Black.copy(alpha = 0.6f), topLeft = panelTopLeft, size = Size(260f, 100f), cornerRadius = CornerRadius(6f))
-    drawRoundRect(color = Color(0xFF00FF66).copy(alpha = 0.25f), topLeft = panelTopLeft, size = Size(260f, 100f), style = Stroke(1.5f), cornerRadius = CornerRadius(6f))
+    val headerTextStyle = baseTextStyle.copy(
+        color = if (hasOutshot) Color.White.copy(alpha = 0.75f) else Color(0xFFFF5336),
+        fontSize = 10.sp,
+        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+    )
 
-    drawText(measurer, "SEQUENCED CHECKOUT PATH:", panelTopLeft + Offset(12f, 10f), style = textStyle.copy(color = Color.White.copy(alpha = 0.7f), fontSize = 10.sp))
+    val headerText = if (hasOutshot) "SEQUENCED CHECKOUT PATH:" else "CHECKOUT STATUS:"
+    val headerMeasured = measurer.measure(headerText, headerTextStyle)
+    var currentY = panelTopLeft.y + paddingVertical
 
-    if (darts.isEmpty()) {
-        drawText(measurer, "NO CHECKOUT ROUTE FOUND", panelTopLeft + Offset(12f, 35f), style = textStyle.copy(color = Color.Red))
+    val measuredRows = if (!hasOutshot) {
+        val text = "NO OUTSHOT AVAILABLE ($remainingScore PTS)"
+        val style = baseTextStyle.copy(
+            color = Color(0xFFFF5336),
+            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+        )
+        listOf(Pair(text, style))
     } else {
-        darts.forEachIndexed { idx, dart ->
-            val stepYOffset = 32f + (idx * 20f)
+        darts.mapIndexed { idx, dart ->
             val isCurrent = idx == activeIdx
             val stepColor = if (isCurrent) Color(0xFF00FFCC) else if (idx < activeIdx) Color.White.copy(0.5f) else Color.White
             val prefix = if (isCurrent) "► DART ${idx + 1}:" else "  DART ${idx + 1}:"
-
-            drawText(
-                textMeasurer = measurer,
-                text = "$prefix ${dart.name} (${dart.score} pts)",
-                topLeft = panelTopLeft + Offset(12f, stepYOffset),
-                style = textStyle.copy(color = stepColor)
-            )
+            val text = "$prefix ${dart.name} (${dart.score} pts)"
+            Pair(text, baseTextStyle.copy(color = stepColor, fontWeight = if (isCurrent) androidx.compose.ui.text.font.FontWeight.Bold else androidx.compose.ui.text.font.FontWeight.Normal))
         }
+    }
+
+    // Dynamic width & height calculation based on exact content
+    val maxTextWidth = maxOf(
+        headerMeasured.size.width.toFloat(),
+        measuredRows.maxOfOrNull { measurer.measure(it.first, it.second).size.width.toFloat() } ?: 0f
+    )
+    val totalRowsHeight = measuredRows.sumOf { measurer.measure(it.first, it.second).size.height } + ((measuredRows.size - 1) * itemSpacing.toInt())
+
+    val panelWidth = maxTextWidth + (paddingHorizontal * 2f) + 16f
+    val panelHeight = headerMeasured.size.height + itemSpacing + totalRowsHeight + (paddingVertical * 2f)
+
+    // Background panel container
+    drawRoundRect(
+        color = Color.Black.copy(alpha = 0.75f),
+        topLeft = panelTopLeft,
+        size = Size(panelWidth, panelHeight),
+        cornerRadius = CornerRadius(8f)
+    )
+    drawRoundRect(
+        color = if (hasOutshot) Color(0xFF00FF66).copy(alpha = 0.35f) else Color(0xFFFF5336).copy(alpha = 0.45f),
+        topLeft = panelTopLeft,
+        size = Size(panelWidth, panelHeight),
+        style = Stroke(1.5f),
+        cornerRadius = CornerRadius(8f)
+    )
+
+    // Render header
+    drawText(
+        textMeasurer = measurer,
+        text = headerText,
+        topLeft = Offset(panelTopLeft.x + paddingHorizontal, currentY),
+        style = headerTextStyle
+    )
+    currentY += headerMeasured.size.height + itemSpacing
+
+    // Render individual item rows safely spaced without overlaps
+    measuredRows.forEach { (text, style) ->
+        val layout = measurer.measure(text, style)
+        drawText(
+            textMeasurer = measurer,
+            text = text,
+            topLeft = Offset(panelTopLeft.x + paddingHorizontal, currentY),
+            style = style
+        )
+        currentY += layout.size.height + itemSpacing
     }
 }

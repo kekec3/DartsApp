@@ -22,7 +22,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.example.darts.db.entities.Battle
-import com.example.darts.ui.components.DartsBottomBar
 import com.example.darts.viewModel.BattleViewModel
 import java.time.Instant
 import java.time.ZoneId

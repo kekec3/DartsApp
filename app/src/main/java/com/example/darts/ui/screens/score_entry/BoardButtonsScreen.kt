@@ -21,28 +21,29 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.darts.R
 import com.example.darts.engine.DartThrow
 import com.example.darts.engine.Multiplier
-import com.example.darts.ui.CardActive
-import com.example.darts.ui.CardInactive
-import com.example.darts.ui.MethodBarBg
+import com.example.darts.ui.screens.CardInactive
+import com.example.darts.ui.screens.MethodBarBg
 import com.example.darts.ui.theme.LimePrimary
-import com.example.darts.ui.theme.LimeSecondary
 import com.example.darts.ui.theme.TextSecondary
 import com.example.darts.viewModel.states.PlayerDisplayState
 
 // ── Local palette ─────────────────────────────────────────────────────────────
-private val BtnSurface = Color(0xFF252B26)
-private val BtnText    = Color(0xFFEEF2EE)
-private val MultiplierBg = Color(0xFF1C221D)
-private val MissColor  = LimePrimary
-private val BullColor  = LimePrimary
-private val UndoBg     = Color(0xFF1E2620)
+private val BtnSurface   = Color(0xFF1E2420)
+private val BtnText      = Color(0xFFEEF2EE)
+private val MultiplierBg = Color(0xFF141A15)
+private val MissColor    = BtnSurface
+private val BullColor    = Color(0xFFFF5336)
+private val OuterColor   = LimePrimary
+private val UndoBg       = Color(0xFF18201B)
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Board Buttons Entry
@@ -64,85 +65,88 @@ fun BoardButtonsEntry(
     }
 
     Column(
-        modifier            = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.Top
+        modifier            = modifier
+            .fillMaxSize()
+            .padding(horizontal = 8.dp, vertical = 4.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
         DartProgressDots(dartsEntered = dartsEntered)
-
-        Spacer(Modifier.height(10.dp))
 
         MultiplierSelector(
             selected = multiplier,
             onSelect = { multiplier = it },
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 6.dp)
+                .height(44.dp)
         )
 
-        Spacer(Modifier.height(10.dp))
-
-        // Number grid 1–20
+        // Number grid 1–20 (Weighted rows fill remaining vertical height)
         (1..20).chunked(5).forEach { row ->
             Row(
                 modifier              = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 6.dp),
-                horizontalArrangement = Arrangement.spacedBy(5.dp)
+                    .weight(1f),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 row.forEach { num ->
                     NumberButton(
                         number     = num,
                         multiplier = multiplier,
                         onClick    = { addAndReset(DartThrow(num, multiplier)) },
-                        modifier   = Modifier.weight(1f)
+                        modifier   = Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
                     )
                 }
             }
-            Spacer(Modifier.height(5.dp))
         }
-
-        Spacer(Modifier.height(4.dp))
 
         // Special + Undo row
         Row(
             modifier              = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 6.dp),
-            horizontalArrangement = Arrangement.spacedBy(5.dp)
+                .weight(1f),
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             SpecialDartButton(
                 label    = "25",
-                sublabel = "BULL",
-                color    = BullColor,
-                modifier = Modifier.weight(1f),
+                sublabel = "OUTER",
+                color    = OuterColor,
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight(),
                 onClick  = { addAndReset(DartThrow(25, Multiplier.SINGLE)) }
             )
             SpecialDartButton(
                 label    = "50",
-                sublabel = "D-BULL",
+                sublabel = "BULL",
                 color    = BullColor,
-                modifier = Modifier.weight(1f),
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight(),
                 onClick  = { addAndReset(DartThrow(25, Multiplier.DOUBLE)) }
             )
             SpecialDartButton(
                 label    = "0",
                 sublabel = "MISS",
                 color    = MissColor,
-                modifier = Modifier.weight(1f),
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight(),
                 onClick  = { addAndReset(DartThrow(0, Multiplier.SINGLE)) }
             )
             UndoButton(
                 onClick  = onUndo,
-                modifier = Modifier.size(54.dp)
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
             )
         }
-
-        Spacer(Modifier.height(6.dp))
     }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Dart progress indicators
+// Dart progress indicators (Fixed-height container to prevent shift)
 // ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
@@ -150,36 +154,42 @@ fun DartProgressDots(dartsEntered: Int) {
     Row(
         modifier              = Modifier
             .fillMaxWidth()
-            .padding(top = 8.dp),
+            .height(32.dp),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment     = Alignment.CenterVertically
     ) {
         repeat(3) { idx ->
             val filled = idx < dartsEntered
             val scale by animateFloatAsState(
-                targetValue   = if (filled) 1.2f else 1f,
+                targetValue   = if (filled) 1.15f else 1f,
                 animationSpec = tween(150),
                 label         = "dot_scale_$idx"
             )
+
             Box(
-                modifier         = Modifier.scale(scale),
+                modifier         = Modifier
+                    .size(24.dp)
+                    .scale(scale),
                 contentAlignment = Alignment.Center
             ) {
                 if (filled) {
-                    // Filled dart slot → lime arrow
-                    ArrowIndicator(color = LimePrimary, size = 14.dp)
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_dart),
+                        contentDescription = "Dart available",
+                        tint = LimePrimary,
+                        modifier = Modifier.size(22.dp)
+                    )
                 } else {
-                    // Empty → dim dash
                     Box(
                         modifier = Modifier
-                            .width(14.dp)
+                            .width(18.dp)
                             .height(3.dp)
                             .clip(RoundedCornerShape(2.dp))
                             .background(Color(0xFF2E3830))
                     )
                 }
             }
-            if (idx < 2) Spacer(Modifier.width(12.dp))
+            if (idx < 2) Spacer(Modifier.width(16.dp))
         }
     }
 }
@@ -216,8 +226,8 @@ fun MultiplierSelector(
     modifier: Modifier = Modifier
 ) {
     Surface(
-        modifier = modifier.height(44.dp),
-        shape    = RoundedCornerShape(22.dp),
+        modifier = modifier,
+        shape    = RoundedCornerShape(12.dp),
         color    = MultiplierBg
     ) {
         Row(
@@ -232,16 +242,17 @@ fun MultiplierSelector(
                 Multiplier.TRIPLE to "TRIPLE"
             ).forEach { (mult, label) ->
                 val isSelected = selected == mult
+                val activeColor = if (mult == Multiplier.TRIPLE) Color(0xFFFF5336) else LimePrimary
                 val bgColor by animateColorAsState(
-                    targetValue   = if (isSelected) LimePrimary else Color.Transparent,
-                    animationSpec = tween(200),
+                    targetValue   = if (isSelected) activeColor else Color.Transparent,
+                    animationSpec = tween(180),
                     label         = "mult_bg_$label"
                 )
                 Box(
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxHeight()
-                        .clip(RoundedCornerShape(18.dp))
+                        .clip(RoundedCornerShape(9.dp))
                         .background(bgColor)
                         .clickable { onSelect(mult) },
                     contentAlignment = Alignment.Center
@@ -250,7 +261,7 @@ fun MultiplierSelector(
                         text          = label,
                         color         = if (isSelected) Color(0xFF0B0F0C) else TextSecondary,
                         fontSize      = 12.sp,
-                        fontWeight    = if (isSelected) FontWeight.ExtraBold else FontWeight.Medium,
+                        fontWeight    = if (isSelected) FontWeight.Black else FontWeight.Bold,
                         letterSpacing = 0.5.sp
                     )
                 }
@@ -272,43 +283,45 @@ fun NumberButton(
 ) {
     val isModified  = multiplier != Multiplier.SINGLE
     val computedVal = number * multiplier.factor
-    val btnColor    = BtnSurface  // Always use default surface
+    val accentColor = if (multiplier == Multiplier.TRIPLE) Color(0xFFFF5336) else LimePrimary
 
     Box(
         modifier = modifier
-            .aspectRatio(1f)
             .clip(RoundedCornerShape(10.dp))
-            .background(btnColor)
+            .background(if (isModified) accentColor.copy(alpha = 0.15f) else BtnSurface)
             .then(
                 if (isModified) Modifier.border(
                     width = 1.5.dp,
-                    color = if (multiplier == Multiplier.TRIPLE) Color(0xFFFF5336) else LimePrimary,
+                    color = accentColor,
                     shape = RoundedCornerShape(10.dp)
                 ) else Modifier
             )
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        if (!isModified) {
             Text(
                 text       = number.toString(),
-                color      = when {
-                    multiplier == Multiplier.TRIPLE -> Color(0xFFFF5336)
-                    isModified -> LimePrimary
-                    else -> BtnText
-                },
-                fontSize   = 18.sp,
-                fontWeight = FontWeight.Bold
+                color      = BtnText,
+                fontSize   = 20.sp,
+                fontWeight = FontWeight.Black
             )
-            if (isModified) {
+        } else {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text       = number.toString(),
+                    color      = accentColor,
+                    fontSize   = 18.sp,
+                    fontWeight = FontWeight.Black
+                )
                 Text(
                     text       = "=$computedVal",
-                    color      = when {
-                        multiplier == Multiplier.TRIPLE -> Color(0xFFFF5336)
-                        else -> LimeSecondary.copy(alpha = 0.8f)
-                    },
-                    fontSize   = 9.sp,
-                    fontWeight = FontWeight.SemiBold
+                    color      = accentColor.copy(alpha = 0.9f),
+                    fontSize   = 11.sp,
+                    fontWeight = FontWeight.Bold
                 )
             }
         }
@@ -327,27 +340,40 @@ fun SpecialDartButton(
     modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
+    val isNeutral = color == BtnSurface || color == Color.Transparent
+    val bg = if (isNeutral) BtnSurface else color.copy(alpha = 0.14f)
+    val textColor = if (isNeutral) BtnText else color
+    val subLabelColor = if (isNeutral) TextSecondary else color.copy(alpha = 0.75f)
+
     Box(
         modifier = modifier
-            .aspectRatio(1f)
             .clip(RoundedCornerShape(10.dp))
-            .background(color.copy(alpha = 0.10f))
-            .border(1.dp, color.copy(alpha = 0.35f), RoundedCornerShape(10.dp))
+            .background(bg)
+            .then(
+                if (!isNeutral) Modifier.border(
+                    width = 1.dp,
+                    color = color.copy(alpha = 0.45f),
+                    shape = RoundedCornerShape(10.dp)
+                ) else Modifier
+            )
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
             Text(
                 text       = label,
-                color      = color,
+                color      = textColor,
                 fontSize   = 18.sp,
-                fontWeight = FontWeight.ExtraBold
+                fontWeight = FontWeight.Black
             )
             Text(
                 text          = sublabel,
-                color         = color.copy(alpha = 0.65f),
-                fontSize      = 8.sp,
-                fontWeight    = FontWeight.SemiBold,
+                color         = subLabelColor,
+                fontSize      = 9.sp,
+                fontWeight    = FontWeight.Bold,
                 letterSpacing = 0.3.sp
             )
         }
@@ -368,12 +394,24 @@ fun UndoButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
-        Icon(
-            imageVector        = Icons.Default.Undo,
-            contentDescription = "Undo",
-            tint               = TextSecondary,
-            modifier           = Modifier.size(26.dp)
-        )
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Icon(
+                imageVector        = Icons.Default.Undo,
+                contentDescription = "Undo",
+                tint               = TextSecondary,
+                modifier           = Modifier.size(22.dp)
+            )
+            Spacer(Modifier.height(2.dp))
+            Text(
+                text       = "UNDO",
+                color      = TextSecondary,
+                fontSize   = 9.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
     }
 }
 
@@ -387,8 +425,7 @@ fun PlayerCardMinimal(
     modifier: Modifier = Modifier
 ) {
     val isCurrent = player.isCurrent
-
-    val cardBg = CardInactive  // Always use inactive background
+    val cardBg = CardInactive
 
     Box(
         modifier = modifier

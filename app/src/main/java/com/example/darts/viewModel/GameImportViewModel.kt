@@ -88,12 +88,12 @@ class GameImportViewModel @Inject constructor(
                             isProcessing = false
                         )
                     }
-                    _uiEvents.send(ImportUiEvent.ShowToast("Data received, confirm to import!"))
+                    //_uiEvents.send(ImportUiEvent.ShowToast("Data received, confirm to import!"))
                 }
             },
             onStatus = { status ->
                 viewModelScope.launch {
-                    _uiEvents.send(ImportUiEvent.ShowToast(status))
+                    //_uiEvents.send(ImportUiEvent.ShowToast(status))
                     if (status.contains("Failed") || status.contains("Denied")) {
                         _uiState.update { it.copy(isProcessing = false, errorMessage = status) }
                     }

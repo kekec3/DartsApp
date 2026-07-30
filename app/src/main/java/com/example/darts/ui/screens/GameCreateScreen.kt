@@ -7,6 +7,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -20,6 +21,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -35,7 +37,7 @@ fun GameCreateScreen(
     viewModel: GameCreationViewModel,
     onNewGame: () -> Unit,
     onMatchSummary: (Int) -> Unit,
-    onBattleSummary: (Int) -> Unit, // Added Battle Summary callback
+    onBattleSummary: (Int) -> Unit,
     onMomentsTimeline: (Int) -> Unit,
     onBack: () -> Unit
 ) {
@@ -138,20 +140,55 @@ fun GameCreateScreen(
             }
         }
 
-        LargeFloatingActionButton(
-            onClick = onNewGame,
-            containerColor = Color(0xFF76B947),
-            shape = RoundedCornerShape(16.dp),
-            contentColor = Color.Black,
+        Box(
             modifier = Modifier
                 .align(Alignment.BottomEnd)
-                .padding(24.dp)
+                .padding(20.dp)
+                .height(56.dp)
+                .wrapContentWidth()
+                .clip(CircleShape)
+                .background(
+                    Brush.horizontalGradient(
+                        listOf(
+                            Color(0xFF8CDB00),
+                            Color(0xFF5CA300)
+                        )
+                    )
+                )
+                .clickable { onNewGame() }
         ) {
-            Icon(
-                imageVector = Icons.Default.Add,
-                contentDescription = "New Game",
-                modifier = Modifier.size(32.dp)
-            )
+
+            Row(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .padding(start = 6.dp, end = 20.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // High-contrast dark badge with plus icon
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .background(Color(0xFF0B0F0C), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = "New Game",
+                        tint = Color(0xFF8CDB00),
+                        modifier = Modifier.size(26.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                Text(
+                    text = "NEW GAME",
+                    color = Color(0xFF0B0F0C),
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = 0.8.sp
+                )
+            }
         }
     }
 }

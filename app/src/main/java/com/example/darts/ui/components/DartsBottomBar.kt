@@ -3,7 +3,6 @@ package com.example.darts.ui.components
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Share
@@ -23,7 +22,6 @@ import com.example.darts.ui.navigation.BattlesRoute
 import com.example.darts.ui.navigation.GameSharingRoute
 import com.example.darts.ui.navigation.HomeRoute
 import com.example.darts.ui.navigation.PlayersRoute
-import com.example.darts.ui.navigation.StatsRoute
 
 @Composable
 fun DartsBottomBar(navController: NavHostController) {

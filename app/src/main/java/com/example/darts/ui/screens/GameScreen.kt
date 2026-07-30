@@ -1,7 +1,6 @@
-package com.example.darts.ui
+package com.example.darts.ui.screens
 
 import android.os.Build
-import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.annotation.RequiresApi
 import androidx.compose.animation.*
@@ -21,15 +20,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.darts.ui.screens.MomentScreen
-import com.example.darts.ui.screens.SettingsScreen
-import com.example.darts.ui.screens.TurnHistoryScreen
 import com.example.darts.ui.screens.score_entry.CameraArRecommendationScreen
-import com.example.darts.ui.screens.score_entry.ArrowIndicator
 import com.example.darts.ui.screens.score_entry.BoardButtonsEntry
 import com.example.darts.ui.screens.score_entry.CricketEntry
 import com.example.darts.ui.screens.score_entry.EntryMethod
@@ -45,6 +41,7 @@ import com.example.darts.viewModel.states.DartSlotState
 import com.example.darts.viewModel.states.PlayerDisplayState
 import com.example.darts.viewModel.states.TurnDisplayState
 import kotlinx.coroutines.launch
+import com.example.darts.R
 
 // ── Shared colour palette ──────────────────────────────────────────────────────
 val ScreenBg       = Color(0xFF0B0F0C)   // BlackPrimary from theme
@@ -166,7 +163,12 @@ fun GameScreen(
                 modifier          = Modifier.padding(horizontal = 20.dp, vertical = 6.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                ArrowIndicator(color = LimePrimary, size = 10.dp)
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_dart),
+                    contentDescription = null,
+                    tint = LimePrimary,
+                    modifier = Modifier.size(18.dp)
+                )
                 Spacer(Modifier.width(8.dp))
                 Text(
                     text          = "${state.turn.currentPlayerName.uppercase()}'S TURN",
@@ -543,12 +545,11 @@ private fun DartSlotCell(
                     fontSize = 11.sp
                 )
             }
-            else -> Box(
-                modifier = Modifier
-                    .width(18.dp)
-                    .height(2.dp)
-                    .clip(RoundedCornerShape(1.dp))
-                    .background(DividerColor)
+            else -> Icon(
+                painter = painterResource(id = R.drawable.ic_dart),
+                contentDescription = "Dart available",
+                tint = LimePrimary.copy(alpha = 0.40f),
+                modifier = Modifier.size(22.dp)
             )
         }
     }
